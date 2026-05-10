@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CS2 Coach RE MVP</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <section class="topbar">
+        <div>
+          <p class="eyebrow">AI TEXT ADVENTURE · CS2 COACH SIM</p>
+          <h1>教练席手账</h1>
+        </div>
+        <div class="match-chip" id="matchChip">MR12 快速镜头</div>
+      </section>
+
+      <section class="hero" id="setupView">
+        <div class="hero-copy">
+          <p class="eyebrow">开局事件</p>
+          <h2>你的战队今晚要打 BO1。老板只给你一次选择。</h2>
+          <p class="lead">
+            选一个开局剧本，然后用 12 条文本看完整场比赛。你只能在关键节点插手，
+            剩下的交给选手的性格、状态和一点点电竞玄学。
+          </p>
+        </div>
+
+        <div class="event-grid" id="starterEvents"></div>
+      </section>
+
+      <section class="game hidden" id="gameView">
+        <aside class="panel roster-panel">
+          <div class="panel-head">
+            <span>战队状态</span>
+            <button class="ghost" id="resetBtn" type="button">新开一局</button>
+          </div>
+          <div class="team-card">
+            <div class="logo" id="teamLogo">FX</div>
+            <div>
+              <h2 id="teamName">Fiction X</h2>
+              <p id="teamMood">更衣室温度：正常</p>
+            </div>
+          </div>
+          <div class="stat-list" id="statList"></div>
+          <div class="roster" id="roster"></div>
+        </aside>
+
+        <section class="match-stage">
+          <div class="scoreboard">
+            <div>
+              <span id="mapName">Mirage</span>
+              <strong id="scoreText">0 : 0</strong>
+            </div>
+            <div class="rounds">
+              <span id="roundText">镜头 0 / 12</span>
+              <span id="clockText">摸鱼倒计时 02:00</span>
+            </div>
+          </div>
+
+          <div class="feed" id="feed"></div>
+
+          <div class="coach-box hidden" id="choiceBox">
+            <p id="choicePrompt">你要怎么处理？</p>
+            <div id="choiceButtons"></div>
+          </div>
+
+          <div class="controls">
+            <button class="primary" id="nextBtn" type="button">推进下一个镜头</button>
+            <button class="secondary" id="autoBtn" type="button">自动播放</button>
+          </div>
+        </section>
+
+        <aside class="panel event-panel">
+          <div class="panel-head">
+            <span>随机事件池</span>
+            <span id="eventCount">20</span>
+          </div>
+          <div class="ticker" id="ticker"></div>
+          <div class="share-card hidden" id="shareCard">
+            <p class="eyebrow">赛后截图卡</p>
+            <h3 id="shareTitle">这场比赛需要一个标题</h3>
+            <p id="shareBody"></p>
+          </div>
+        </aside>
+      </section>
+    </main>
+
+    <script src="./app.js"></script>
+  </body>
+</html>
