@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Donk 又红温了？｜电竞战队模拟器</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="app">
+      <header class="header">
+        <div>
+          <p class="kicker">CS2 TEXT MANAGER · 20 WEEK SEASON</p>
+          <h1>Donk 又红温了？</h1>
+        </div>
+        <div class="save-pill" id="saveStatus">LocalStorage 自动存档</div>
+      </header>
+
+      <section class="grid">
+        <aside class="panel side">
+          <div class="panel-title">
+            <span>战队档案</span>
+            <button id="newSeasonBtn" class="text-btn" type="button">新赛季</button>
+          </div>
+
+          <div class="team-block">
+            <div class="team-logo">DX</div>
+            <div>
+              <h2 id="teamName">Drama X</h2>
+              <p id="seasonLine">第 1 周 / 20 周</p>
+            </div>
+          </div>
+
+          <div class="stat-stack" id="teamStats"></div>
+
+          <div class="panel-title small">
+            <span>首发名单</span>
+            <span id="recordLine">0W-0L</span>
+          </div>
+          <div class="roster" id="roster"></div>
+        </aside>
+
+        <section class="panel main">
+          <div class="terminal-head">
+            <div>
+              <p class="kicker">每周循环</p>
+              <h2 id="weekTitle">选择本周行动</h2>
+            </div>
+            <div class="scoreline" id="lastResult">等待赛季开始</div>
+          </div>
+
+          <div class="actions" id="actions"></div>
+
+          <div class="decision hidden" id="decisionBox">
+            <p id="decisionText"></p>
+            <div id="decisionOptions"></div>
+          </div>
+
+          <div class="match-card hidden" id="matchCard">
+            <div class="match-top">
+              <span id="matchName">本周比赛</span>
+              <strong id="matchScore">0 : 0</strong>
+            </div>
+            <div class="round-feed" id="matchFeed"></div>
+          </div>
+
+          <div class="season-end hidden" id="seasonEnd">
+            <p class="kicker">SEASON REPORT</p>
+            <h2 id="endingTitle"></h2>
+            <p id="endingBody"></p>
+            <div class="records" id="records"></div>
+            <button id="restartBtn" class="primary" type="button">开启新赛季</button>
+          </div>
+        </section>
+
+        <aside class="panel log-panel">
+          <div class="panel-title">
+            <span>事件日志</span>
+            <button id="clearLogBtn" class="text-btn" type="button">清日志</button>
+          </div>
+          <div class="log" id="log"></div>
+        </aside>
+      </section>
+    </main>
+
+    <script type="module" src="./app.js"></script>
+  </body>
+</html>
