@@ -179,11 +179,13 @@ h2 {
   display: grid;
   grid-template-columns: 310px minmax(0, 1fr) 370px;
   gap: 16px;
-  min-height: calc(100vh - 132px);
+  height: calc(100vh - 132px);
+  min-height: 680px;
 }
 
 .panel {
   padding: 16px;
+  overflow: hidden;
 }
 
 .main {
@@ -444,7 +446,7 @@ h2 {
 }
 
 .round-feed {
-  max-height: 58vh;
+  height: min(48vh, 430px);
   overflow: auto;
   padding: 14px;
   scroll-behavior: smooth;
@@ -477,6 +479,7 @@ h2 {
 #nextRoundBtn {
   width: calc(100% - 28px);
   margin: 0 14px 14px;
+  white-space: pre-line;
 }
 
 .forum-card {
@@ -538,8 +541,32 @@ h2 {
 .log {
   display: flex;
   flex-direction: column-reverse;
-  max-height: calc(100vh - 180px);
+  height: calc(100% - 42px);
   overflow: auto;
+}
+
+.side {
+  overflow: auto;
+}
+
+.main {
+  overflow: auto;
+}
+
+.secondary-action {
+  cursor: pointer;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 12px;
+  color: var(--green);
+  background: rgba(103, 240, 163, 0.05);
+  font-weight: 900;
+}
+
+.season-end .primary,
+.season-end .secondary-action {
+  width: 100%;
+  margin-top: 10px;
 }
 
 .log-item {

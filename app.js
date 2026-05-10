@@ -8,10 +8,10 @@ function createStore(createState) {
   };
   const getState = () => state;
   state = createState(setState, getState);
-  return { getState, setState, subscribe: (fn) => (listeners.add(fn), () => listeners.delete(fn)) };
+  return { getState, subscribe: (fn) => (listeners.add(fn), () => listeners.delete(fn)) };
 }
 
-const SAVE_KEY = "cs2-coach-season-v5";
+const SAVE_KEY = "cs2-coach-season-v6";
 const WIN_SCORE = 13;
 const SEASON_WEEKS = 5;
 const START_BUDGET = 100;
@@ -25,64 +25,99 @@ const clone = (v) => JSON.parse(JSON.stringify(v));
 const teamStatDefs = [["资金", "money", "¥"], ["士气", "morale", ""], ["名气", "fame", ""], ["战术熟练度", "tactics", ""], ["团队默契", "chemistry", ""], ["粉丝支持", "fans", ""]];
 const playerStatDefs = [["枪", "aim"], ["脑", "sense"], ["心", "mental"], ["团", "teamwork"], ["商", "market"], ["疲", "fatigue"]];
 
-const marketPlayers = [
-  { name: "donk", role: "突破", price: 35, tag: "红温巨星", voice: "不想等烟散", aim: 99, sense: 80, mental: 64, teamwork: 58, market: 98, fatigue: 22, clutch: 80, tilt: 78 },
-  { name: "m0NESY", role: "狙击", price: 32, tag: "镜头制造机", voice: "一笑就要进集锦", aim: 97, sense: 87, mental: 77, teamwork: 67, market: 97, fatigue: 20, clutch: 94, tilt: 42 },
-  { name: "ropz", role: "自由人", price: 27, tag: "沉默背影", voice: "绕后不解释", aim: 88, sense: 96, mental: 91, teamwork: 78, market: 78, fatigue: 16, clutch: 90, tilt: 18 },
-  { name: "siuhy", role: "IGL", price: 21, tag: "年轻指挥", voice: "把沉默也当信息", aim: 76, sense: 91, mental: 84, teamwork: 90, market: 70, fatigue: 18, clutch: 74, tilt: 34 },
-  { name: "flameZ", role: "辅助", price: 18, tag: "更衣室胶水", voice: "数据不会记闪光", aim: 80, sense: 79, mental: 84, teamwork: 94, market: 66, fatigue: 18, clutch: 70, tilt: 28 },
-  { name: "NiKo", role: "明星步枪", price: 30, tag: "关键局谜题", voice: "所有人都等他开第一枪", aim: 94, sense: 88, mental: 70, teamwork: 70, market: 95, fatigue: 21, clutch: 83, tilt: 52 },
-  { name: "ZywOo", role: "全能核心", price: 38, tag: "六边形答案", voice: "不吵，但全都能做", aim: 98, sense: 96, mental: 92, teamwork: 84, market: 99, fatigue: 18, clutch: 96, tilt: 16 },
-  { name: "karrigan", role: "老派 IGL", price: 16, tag: "赌点导演", voice: "输赢都敢叫暂停", aim: 66, sense: 93, mental: 88, teamwork: 88, market: 80, fatigue: 24, clutch: 68, tilt: 26 },
-  { name: "sh1ro", role: "保守狙", price: 24, tag: "Jame Time 亲戚", voice: "活着才有下一回合", aim: 90, sense: 90, mental: 87, teamwork: 76, market: 66, fatigue: 15, clutch: 88, tilt: 22 },
-  { name: "Twistzz", role: "枪男", price: 20, tag: "北美发型总监", voice: "顺风很帅，逆风也帅", aim: 87, sense: 77, mental: 76, teamwork: 78, market: 82, fatigue: 20, clutch: 78, tilt: 38 },
-  { name: "Jimpphat", role: "年轻核心", price: 15, tag: "冷静小孩", voice: "不说大话但敢补枪", aim: 82, sense: 84, mental: 86, teamwork: 82, market: 64, fatigue: 14, clutch: 78, tilt: 20 },
-  { name: "Nova", role: "青训新人", price: 8, tag: "天才彩票", voice: "他不是来学习的", aim: 78, sense: 70, mental: 72, teamwork: 66, market: 58, fatigue: 12, clutch: 86, tilt: 44 },
+const rawPlayers = [
+  ["ZywOo","全能核心",40,"六边形战士","S级超巨",100,100,90,80,100,94,22],
+  ["donk","突破",37,"枪法天花板","S级超巨",100,80,70,70,90,75,58],
+  ["ropz","自由人",34,"自由人教科书","S级超巨",90,100,90,90,70,94,19],
+  ["m0NESY","狙击",36,"狙击艺术家","S级超巨",100,90,80,70,100,84,38],
+  ["sh1ro","狙击",28,"保守狙神","A级核心",80,90,90,80,60,90,22],
+  ["molodoy","辅助",22,"体系绿叶","A级核心",80,80,80,90,50,80,27],
+  ["flameZ","辅助",22,"牺牲拼图","A级核心",70,80,80,100,50,80,24],
+  ["frozen","步枪",25,"稳定器","A级核心",80,80,80,90,60,80,27],
+  ["KSCERATO","步枪",25,"巴西一哥","A级核心",80,80,80,80,70,80,30],
+  ["Spinx","步枪",24,"以色列核心","A级核心",80,80,80,80,60,80,30],
+  ["Twistzz","步枪",23,"北美枪男","A级核心",80,70,70,80,70,70,38],
+  ["mezii","辅助",18,"团队粘合剂","B级主力",70,80,80,90,50,80,27],
+  ["Senzu","步枪",18,"亚洲核心","B级主力",80,70,80,80,40,76,30],
+  ["XANTARES","突破",21,"土耳其 aim 神","B级主力",90,70,70,60,50,70,44],
+  ["YEKINDAR","突破",22,"狂哥","B级主力",90,70,70,70,60,70,41],
+  ["xertioN","突破",19,"冷静突破","B级主力",70,80,80,90,50,80,27],
+  ["torzsi","狙击",18,"体系狙","B级主力",70,80,70,80,50,75,38],
+  ["NiKo","明星步枪",30,"Major 魔咒","A级核心",90,80,50,70,80,64,57],
+  ["iM","辅助",18,"逆境爆发","B级主力",70,80,80,90,50,80,27],
+  ["b1t","步枪",24,"冠军拼图","A级核心",80,80,80,90,60,80,27],
+  ["HeavyGod","步枪",18,"高光低谷","B级主力",80,70,70,70,50,70,41],
+  ["kyousuke","步枪",17,"未来可期","潜力新星",80,70,70,70,60,70,41],
+  ["w0nderful","狙击",20,"稳定成长","B级主力",80,80,70,80,60,75,38],
+  ["Wicadia","步枪",16,"土耳其枪手","B级主力",80,70,70,70,40,70,41],
+  ["yuurih","步枪",18,"南美核心","B级主力",80,70,70,80,50,70,38],
+  ["Makazze","辅助",14,"国际纵队新血","潜力新星",70,70,80,80,40,76,30],
+  ["910","狙击",16,"蒙古狙击手","潜力新星",80,70,70,70,40,70,41],
+  ["MATYS","步枪",16,"年轻步枪手","潜力新星",80,70,70,70,50,70,41],
+  ["tN1R","步枪",16,"Spirit 新血","潜力新星",80,70,70,70,50,70,41],
+  ["latto","辅助",14,"南美绿叶","B级主力",70,70,80,80,40,76,30],
+  ["s1mple","狙击",34,"CS:GO GOAT","传奇级",100,90,70,60,100,79,44],
+  ["device","狙击",28,"丹麦传奇","传奇级",80,90,80,80,70,84,30],
+  ["huNter-","步枪",22,"巴尔干核心","A级核心",80,80,70,80,60,75,38],
+  ["broky","狙击",22,"松弛狙击","A级核心",80,80,70,80,60,75,38],
+  ["rain","步枪",23,"十年忠诚","A级核心",80,70,80,90,60,76,27],
+  ["Magisk","步枪",24,"冠军拼图","A级核心",80,80,80,90,60,80,27],
+  ["cadiaN","IGL",24,"争议领袖","传奇级",70,90,70,80,70,79,38],
+  ["jks","自由人",23,"冷面杀手","A级核心",80,80,80,90,50,80,27],
+  ["Jimpphat","步枪",18,"18岁冠军","潜力新星",80,70,80,80,60,76,30],
+  ["EliGE","步枪",23,"北美荣光","A级核心",80,70,80,90,60,76,27],
 ];
 
+const marketPlayers = rawPlayers.map(([name, role, price, tag, voice, aim, sense, mental, teamwork, market, clutch, tilt]) => ({
+  name, role, price, tag, voice, aim, sense, mental, teamwork, market, clutch, tilt, fatigue: 18,
+}));
+
 const opponents = [
-  { name: "Vitality", style: "纪律", note: "稳定、纪律、明星不讲理", power: 88, star: "ZywOo" },
-  { name: "FaZe Clan", style: "残局", note: "宿命感很重，残局很硬", power: 84, star: "ropz" },
-  { name: "Falcons", style: "明星", note: "预算像开了控制台", power: 86, star: "NiKo" },
-  { name: "Spirit", style: "提速", note: "对面也有一个不想等烟散的人", power: 85, star: "donk" },
-  { name: "二线黑马队", style: "爆冷", note: "纸面不强，但最擅长让强队丢人", power: 76, star: "Rookie" },
+  { name: "Vitality", style: "纪律队", note: "稳定、纪律、明星不讲理", power: 88, star: "ZywOo" },
+  { name: "FaZe Clan", style: "慢打队", note: "宿命感很重，残局很硬", power: 84, star: "ropz" },
+  { name: "Falcons", style: "明星单核队", note: "预算像开了控制台", power: 86, star: "NiKo" },
+  { name: "Spirit", style: "激进队", note: "对面也有一个不想等烟散的人", power: 85, star: "donk" },
+  { name: "二线黑马队", style: "赌点队", note: "纸面不强，最擅长让强队丢人", power: 76, star: "Rookie" },
+  { name: "心理战队", style: "心理战队", note: "暂停很慢，假动作很多", power: 80, star: "Caller" },
 ];
 
 const weeklyDeck = [
   { id: "discipline", title: "📋 强调纪律", text: "默认控图、补枪、听 IGL。暂停后更容易连续前压同一片区域。", effect: { tactics: 8, chemistry: 3, morale: -2 }, style: { discipline: 8 } },
-  { id: "gamble", title: "🎲 放手赌点", text: "训练非常规赌点。可能打穿对手，也可能把自己打成论坛素材。", effect: { fame: 5, tactics: -2, morale: 2 }, style: { gamble: 9 } },
+  { id: "gamble", title: "🎲 放手赌点", text: "训练非常规赌点。打穿对手或变成论坛素材。", effect: { fame: 5, tactics: -2, morale: 2 }, style: { gamble: 9 } },
   { id: "antiStar", title: "🎯 针对对面明星", text: "双架、反清、假信息，全都往对面明星脸上招呼。", effect: { tactics: 5, chemistry: -1 }, style: { antiStar: 9 } },
   { id: "speed", title: "⚡ 直接提速", text: "不让对手舒服架默认。你们会更像刀，也更像赌徒。", effect: { morale: 4, fans: 3, tactics: -3 }, style: { speed: 9 } },
   { id: "calm", title: "🧯 安抚红温选手", text: "把红温留给准星，不留给语音。关键局心态更稳。", effect: { morale: 8, chemistry: 4, fame: -1 }, style: { calm: 9 } },
-  { id: "eco", title: "💸 经济纪律训练", text: "强起和保枪都不丢人，丢人的是不知道为什么买。", effect: { money: 4, tactics: 5, morale: -1 }, style: { economy: 8 } },
-  { id: "info", title: "👁 信息差三架位", text: "练三架、反摸和假脚步。对手会明显没警戒默认位置。", effect: { tactics: 7, chemistry: 2 }, style: { info: 8 } },
+  { id: "eco", title: "💸 经济纪律训练", text: "强起和保枪都有理由。买枪开始变成选择题。", effect: { money: 4, tactics: 5, morale: -1 }, style: { economy: 8 } },
+  { id: "info", title: "👁 信息差三架位", text: "练三架、反摸和假脚步。对手会开始怀疑默认位置。", effect: { tactics: 7, chemistry: 2 }, style: { info: 8 } },
 ];
 
-const interventions = [
-  { label: "叫暂停，强调纪律", style: { discipline: 8, calm: 2 }, effect: { tactics: 3, morale: 1 }, text: "暂停之后，队伍连续三回合前压 A 厅。对手明显没警戒默认的位置。" },
+const baseInterventions = [
+  { label: "叫暂停，强调纪律", style: { discipline: 8, calm: 2 }, effect: { tactics: 3, morale: 1 }, text: "暂停之后，队伍连续三回合前压 A 厅。对手没有提前警戒这个默认位。" },
   { label: "直接提速", style: { speed: 9 }, effect: { morale: 2, tactics: -1 }, text: "你让队伍把默认撕掉。下一回合，五个人像一把没上保险的刀。" },
   { label: "强起，买无甲大狙", style: { gamble: 10, economy: -4 }, effect: { money: -2, fame: 3 }, text: "无甲大狙买出来那一刻，弹幕先笑了。十秒后没人笑了。" },
   { label: "非常规赌点", style: { gamble: 10, info: 3 }, effect: { tactics: -1, fans: 2 }, text: "你赌了一个没人敢赌的位置。对手搜点路线慢了半秒，半秒就是枪线。" },
-  { label: "针对对面明星", style: { antiStar: 10, discipline: 2 }, effect: { tactics: 2, morale: 1 }, text: "你把两颗闪和一个人都丢给对面明星。不是尊重，是围剿。" },
-  { label: "安抚红温选手", style: { calm: 10 }, effect: { morale: 4, chemistry: 3 }, text: "你没有骂 donk，只说：下一枪你来开，但报点要报。语音降温了，准星没降。" },
+  { label: "针对对面明星", style: { antiStar: 10, discipline: 2 }, effect: { tactics: 2, morale: 1 }, text: "你把两颗闪和一个人都丢给对面明星。围剿开始。" },
+  { label: "安抚红温选手", style: { calm: 10 }, effect: { morale: 4, chemistry: 3 }, text: "你没有骂 {hot}，只说：下一枪你来开，但报点要报。语音降温了，准星没降。" },
 ];
 
 const nodes = {
   eco: ["经济局", "经济像刚被老板审过，强起和保枪都很难看。"],
-  clutch: ["关键残局", "场上只剩两个人，但语音里的重量像十个人。"],
+  clutch: ["关键残局", "场上只剩两个人，语音里的重量像十个人。"],
   timeout: ["暂停窗口", "镜头切到教练席，所有人都在等你有没有东西。"],
-  morale: ["士气变化", "这一分不只影响比分，也影响谁还愿意相信谁。"],
+  morale: ["士气变化", "这一分会影响谁还愿意相信谁。"],
   gamble: ["赌点", "地图另一侧空得能听见风声，赌对是天才，赌错是素材。"],
   info: ["信息误判", "对手给了一个假脚步，你们像真的听见了命运。"],
   duel: ["明星对位", "对面明星开始要球，这回合像单挑，也像审判。"],
 };
 
-const scenarioList = [
-  ["均势拉扯", 0],
-  ["慢性崩盘", -5],
-  ["被爆冷", -8],
-  ["强队碾压", -10],
+const scripts = [
+  ["开局暴打", -8],
+  ["被碾压", -10],
+  ["经济崩盘", -6],
+  ["加时鏖战", 0],
   ["赌点翻盘", -4],
+  ["明星爆种", 4],
+  ["对手调整战术", -3],
   ["宿命局", 0],
 ];
 
@@ -131,14 +166,27 @@ const store = createStore((set) => ({
       phase: "week",
       players,
       weeklyActions: rollWeeklyActions(),
-      logs: [{ week: 1, title: "建队完成", text: `你选下了 ${players.map((p) => p.name).join("、")}。这不是阵容，这是五个会制造舆论的人。` }],
+      logs: [{ week: 1, title: "建队完成", text: `你选下了 ${players.map((p) => p.name).join("、")}。这套阵容决定你能叫出什么暂停，也决定谁会在关键局站出来。` }],
       lastResult: "第 1 周：选择本周方向",
     };
   }),
   newSeason: () => set(createInitialState()),
-  clearLog: () => set({ logs: [] }),
+  continueSeason: () => set((s) => ({
+    phase: "week",
+    week: 1,
+    team: applyTeamEffect(s.team, { morale: 8, chemistry: 8, tactics: 4 }),
+    players: s.players.map((p) => ({ ...p, fatigue: clamp(p.fatigue - 10), teamwork: clamp(p.teamwork + 2) })),
+    weeklyActions: rollWeeklyActions(),
+    currentMatch: null,
+    pendingDecision: null,
+    lastOpinion: null,
+    logs: [{ week: 1, title: "继续磨合", text: "你没有拆队。队员理解这是信任，也明白下一次崩盘要自己扛。" }, ...s.logs].slice(0, 80),
+    wins: 0,
+    losses: 0,
+    seasonEnded: false,
+    lastResult: "新 5 周：继续磨合",
+  })),
   addLog: (title, text) => set((s) => ({ logs: [{ week: s.week, title, text }, ...s.logs].slice(0, 80) })),
-  applyTeam: (effect = {}) => set((s) => ({ team: applyTeamEffect(s.team, effect) })),
   startMatch: (action) => set((s) => startMatchState(s, action)),
   appendLine: (line) => set((s) => ({ currentMatch: { ...s.currentMatch, lines: [...s.currentMatch.lines, line] } })),
   updateMatch: (patch) => set((s) => ({ currentMatch: { ...s.currentMatch, ...patch } })),
@@ -149,8 +197,9 @@ const store = createStore((set) => ({
     currentMatch: {
       ...s.currentMatch,
       coach: mergeStyle(s.currentMatch.coach, option.style),
+      timeouts: s.currentMatch.timeouts - (s.pendingDecision?.timeoutCost ? 1 : 0),
       usedDecisionRounds: [...s.currentMatch.usedDecisionRounds, s.currentMatch.round],
-      lines: [...s.currentMatch.lines, { tone: "event", text: `教练干预：${option.text}` }],
+      lines: [...s.currentMatch.lines, { tone: "event", text: `教练干预：${renderDecisionText(option.text, s)}` }],
     },
   })),
   finishMatch: (won, opinion, moment) => set((s) => {
@@ -198,13 +247,13 @@ function mergeStyle(base = {}, add = {}) {
 
 function startMatchState(s, action) {
   const opponent = s.week === 5 ? opponents[0] : pick(opponents);
-  const [scenario, bias] = s.week === 5 ? ["宿命局", 0] : pick(scenarioList);
+  const [script, bias] = s.week === 5 ? ["宿命局", 0] : pick(scripts);
   return {
     phase: "match",
     team: applyTeamEffect(s.team, action.effect),
     currentMatch: {
       opponent,
-      scenario,
+      script,
       bias,
       map: pick(["Mirage", "Inferno", "Nuke", "Ancient", "Anubis", "Dust2"]),
       round: 0,
@@ -213,10 +262,12 @@ function startMatchState(s, action) {
       economyUs: 50,
       economyThem: 50,
       coach: { ...action.style },
+      timeouts: 3,
+      adjustCount: 0,
       usedDecisionRounds: [],
-      lines: [{ tone: "event", text: `局势：${scenario}。对手是 ${opponent.name}：${opponent.note}。本周你选择了「${action.title}」。` }],
+      lines: [{ tone: "event", text: `剧本：${script}。对手是 ${opponent.name}：${opponent.note}。本周你选择了「${action.title}」。` }],
     },
-    lastResult: `${opponent.name} · ${scenario}`,
+    lastResult: `${opponent.name} · ${script}`,
   };
 }
 
@@ -239,12 +290,12 @@ function nodeForRound(m) {
 function tacticBonus(node, coach, opponent) {
   let b = 0;
   if (node === "eco") b += (coach.economy || 0) - 2;
-  if (node === "gamble") b += (coach.gamble || 0) - (opponent.style === "纪律" ? 3 : 0);
+  if (node === "gamble") b += (coach.gamble || 0) - (opponent.style === "纪律队" ? 3 : 0);
   if (node === "info") b += (coach.info || 0) + (coach.discipline || 0) * 0.35;
-  if (node === "duel") b += (coach.antiStar || 0) - (opponent.style === "明星" ? 4 : 0);
+  if (node === "duel") b += (coach.antiStar || 0) - (opponent.style === "明星单核队" ? 4 : 0);
   if (node === "morale") b += coach.calm || 0;
   if (node === "timeout") b += (coach.discipline || 0) + (coach.calm || 0) * 0.4;
-  if (coach.speed && opponent.style !== "提速") b += node === "info" ? -2 : coach.speed * 0.45;
+  if (coach.speed && opponent.style !== "激进队") b += node === "info" ? -2 : coach.speed * 0.45;
   return b;
 }
 
@@ -253,7 +304,7 @@ function winProbability(state, node) {
   const base = 50 + (teamPower(state) - m.opponent.power) * 0.75;
   const economy = (m.economyUs - m.economyThem) * 0.12;
   const pressure = Math.max(m.us, m.them) >= 10 ? (state.team.morale - 50) * 0.1 + avg(state.players, ["clutch"]) * 0.04 - 3 : 0;
-  return clamp(base + economy + m.bias + tacticBonus(node, m.coach, m.opponent) + pressure, 8, 92);
+  return clamp(base + economy + m.bias + tacticBonus(node, m.coach, m.opponent) + pressure - m.adjustCount * 2.2, 8, 92);
 }
 
 function shouldAskDecision(m) {
@@ -261,12 +312,52 @@ function shouldAskDecision(m) {
   return m.round === 4 || m.round === 8 || (m.them - m.us >= 3 && m.round > 3) || Math.max(m.us, m.them) === 11;
 }
 
+function makeDecisionPrompt(m) {
+  if (m.them - m.us >= 3) return "连续丢分，士气在掉。你要训话、变速，还是把比赛交给明星？";
+  if (m.adjustCount >= 2) return "对手已经连续两次针对你的转点做调整。继续默认会被吃，换一个高风险 call？";
+  if (Math.max(m.us, m.them) >= 11) return "赛点边缘。每一个赌点都可能变成封面，也可能变成会议材料。";
+  return "局势节点到了。暂停、变速、强起或赌点，都会改变后续比赛风格。";
+}
+
+function dynamicInterventions(m) {
+  const pool = [...baseInterventions];
+  if (m.them - m.us >= 3) {
+    pool.unshift(
+      { label: "暂停训话", style: { calm: 9, discipline: 4 }, effect: { morale: 5, chemistry: 2 }, text: "你把耳机放下，只讲下一分怎么拿。队员的呼吸慢了下来。" },
+      { label: "让明星自由发挥", style: { speed: 4, gamble: 7 }, effect: { fame: 4, chemistry: -3 }, text: "你把战术板合上：这一回合，谁敢开枪谁说了算。" }
+    );
+  }
+  if (m.adjustCount >= 2) {
+    pool.unshift({ label: "假转点骗调整", style: { info: 10, discipline: 3 }, effect: { tactics: 3 }, text: "对手开始针对你的转点，你给他们一个假答案。" });
+  }
+  if (m.economyUs < 35) {
+    pool.unshift({ label: "半甲 Tec-9 提速", style: { speed: 8, economy: -2 }, effect: { money: -1, fame: 2 }, text: "经济已经烂了，那就把节奏也打烂。" });
+  }
+  return shuffle(pool).slice(0, 3);
+}
+
+function activePause() {
+  const s = store.getState();
+  const m = s.currentMatch;
+  if (s.phase !== "match" || s.pendingDecision || !m || m.timeouts <= 0) return;
+  store.getState().setDecision({
+    prompt: `主动暂停。你还剩 ${m.timeouts} 次暂停，这次会消耗 1 次。`,
+    options: dynamicInterventions(m),
+    timeoutCost: true,
+  });
+}
+
+function renderDecisionText(text, state) {
+  const hot = [...state.players].sort((a, b) => b.tilt + b.fatigue - (a.tilt + a.fatigue))[0]?.name || "核心选手";
+  return text.replaceAll("{hot}", hot);
+}
+
 function playNextRound() {
   const state = store.getState();
   const m = state.currentMatch;
   if (!m || state.pendingDecision || state.phase !== "match") return;
   if (shouldAskDecision(m)) {
-    store.getState().setDecision({ prompt: "局势节点到了。你的暂停、变速、强起或赌点，会改变后续比赛风格。", options: shuffle(interventions).slice(0, 3) });
+    store.getState().setDecision({ prompt: makeDecisionPrompt(m), options: dynamicInterventions(m) });
     return;
   }
   const node = nodeForRound(m);
@@ -277,8 +368,9 @@ function playNextRound() {
   const round = m.round + 1;
   const economyUs = clamp(m.economyUs + (won ? 12 : -14) + (node === "eco" ? 8 : 0));
   const economyThem = clamp(m.economyThem + (won ? -12 : 12));
-  store.getState().appendLine(makeRoundLine(state, { node, prob, won, us, them, round }));
-  store.getState().updateMatch({ round, us, them, economyUs, economyThem });
+  const adjustCount = m.adjustCount + (!won && ["info", "gamble", "duel"].includes(node) ? 1 : 0);
+  store.getState().appendLine(makeRoundLine(state, { node, prob, won, us, them, round, adjustCount }));
+  store.getState().updateMatch({ round, us, them, economyUs, economyThem, adjustCount });
   if (us >= WIN_SCORE || them >= WIN_SCORE) {
     const fresh = { ...store.getState(), currentMatch: { ...store.getState().currentMatch, us, them } };
     const wonMatch = us > them;
@@ -303,7 +395,8 @@ function makeRoundLine(state, ctx) {
   const p = pickWeighted(state.players, ctx.won);
   const action = ctx.won ? winAction(p, ctx.node) : loseAction(p, state.currentMatch.opponent.star, ctx.node);
   const cast = castLine(ctx, p);
-  return { tone: ctx.won ? "good" : "bad", text: `<small>R${ctx.round}｜${ctx.us}:${ctx.them}｜${title}｜参考胜率 ${ctx.prob.toFixed(2)}%</small>${detail}<br>${action}<br><br>解说台：${cast}` };
+  const adjust = ctx.adjustCount >= 2 && !ctx.won ? "<br>警报：对方已经开始根据你的转点节奏提前站位。" : "";
+  return { tone: ctx.won ? "good" : "bad", text: `<small>第${ctx.round}回合｜${ctx.us}:${ctx.them}｜${title}｜参考胜率 ${ctx.prob.toFixed(2)}%</small>${detail}<br>${action}${adjust}<br><br>解说台：${cast}` };
 }
 
 function winAction(p, node) {
@@ -333,25 +426,39 @@ function loseAction(p, star, node) {
 }
 
 function castLine(ctx, p) {
+  const winLines = [
+    `不得不提啊兄弟们，${p.name} 这回合真有东西。`,
+    "这波有暂停后的味道，线路全对上了。",
+    "赌对了！这一下对手的默认被你撕开了。",
+    "黑暗中的曙光出来了，硬把局势从地上捡起来。",
+    "这个回合打完，对面下次真不敢这么默认了。",
+  ];
+  const loseLines = [
+    "这分丢得太伤，局势被对方提前调整压住了。",
+    "慢性崩盘的味道出来了，但还没到不能救。",
+    "这个 call 没打出来，论坛标题已经开始自己写了。",
+    "这种信息误判，对世界观冲击太大了。",
+    "这回合要进复盘，而且会反复暂停。",
+  ];
   if (ctx.won && ctx.prob < 35) return "卧槽真的假的？参考胜率这么低都能翻，黑暗中的曙光啊兄弟们！";
   if (!ctx.won && ctx.prob > 68) return "这都能输？对世界观冲击太大了，菜就多练好吧。";
-  if (ctx.node === "clutch") return "残局来了，所有人都别眨眼，这不是打游戏，是打心跳。";
-  return ctx.won ? `不得不提啊兄弟们，${p.name} 这回合真有东西。` : "完了，慢性崩盘的味道出来了，再别说了。";
+  if (ctx.node === "clutch") return "残局来了，所有人都别眨眼，现在打的是心跳。";
+  return ctx.won ? pick(winLines) : pick(loseLines);
 }
 
 function makeOpinion(state, won) {
   const m = state.currentMatch;
-  const headline = won ? pick(["这暂停值一个 Major 冠军。", "教练今天真有东西。", "从赌点到绝杀，这队终于像个队了。"]) : pick(["这教练是不是不会 CALL？", "暂停叫了，但像叫给观众看的。", "这不是输比赛，是把粉丝世界观打碎了。"]);
+  const headline = won ? pick(["这暂停值一个 Major 冠军。", "教练今天真有东西。", "从赌点到绝杀，这队终于像个队了。"]) : pick(["这教练会不会 CALL？", "暂停叫了，但像叫给观众看的。", "粉丝世界观被这一场打碎了。"]);
   const ratings = state.players.map((p) => ({ name: p.name, score: clamp((won ? 7.2 : 5.4) + (p.clutch - 70) / 20 + Math.random() * 1.8, 1, 10).toFixed(1) }));
-  return { headline, body: `${m.opponent.name} ${m.map}，最终 ${m.us}:${m.them}。论坛争论点：参考胜率到底有没有用，为什么低胜率回合反而最像名场面。`, ratings };
+  return { headline, body: `${m.opponent.name} ${m.map}，最终 ${m.us}:${m.them}。论坛争论点：对方调整为什么来得这么快，低胜率回合为什么最像名场面。`, ratings };
 }
 
 function makeMoment(state, won) {
   const m = state.currentMatch;
-  if (m.scenario === "宿命局") return won ? "那个宿命局：五年前的队友，今天被你的暂停拆开了" : "那个宿命局：旧队友情分没救回最后一分";
+  if (m.script === "宿命局") return won ? "那个宿命局：五年前的队友，今天被你的暂停拆开了" : "那个宿命局：旧队友情分没救回最后一分";
   if (won && m.them >= 11) return "那次绝杀：参考胜率很低的回合，被你赌成了封面";
   if (!won && m.us >= 11) return "那次崩盘：离 13 分只差一口气，最后全队都不敢呼吸";
-  return won ? "那次翻盘：不是数值赢了，是暂停真的改了走势" : "那次被爆冷：纸面优势被一回合一回合拆掉";
+  return won ? "那次翻盘：暂停真的改了走势" : "那次被爆冷：纸面优势被一回合一回合拆掉";
 }
 
 function render() {
@@ -410,12 +517,15 @@ function renderDecision(s) {
 function renderMatch(s) {
   const m = s.currentMatch;
   $("matchCard").classList.toggle("hidden", s.phase !== "match" || !m);
+  $("activePauseBtn").disabled = s.phase !== "match" || !m || !!s.pendingDecision || m.timeouts <= 0;
+  $("activePauseBtn").textContent = m ? `主动暂停 x${m.timeouts}` : "主动暂停 x3";
   if (!m) return;
   $("matchName").textContent = `${m.map} vs ${m.opponent.name}`;
   $("matchScore").textContent = `${m.us} : ${m.them}`;
-  $("matchMeta").innerHTML = [`局势 ${m.scenario}`, `对手风格 ${m.opponent.style}`, `我方经济 ${m.economyUs}`, `对方经济 ${m.economyThem}`].map((x) => `<span class="tag">${x}</span>`).join("");
+  $("matchMeta").innerHTML = [`剧本 ${m.script}`, `对手风格 ${m.opponent.style}`, `我方经济 ${m.economyUs}`, `对方经济 ${m.economyThem}`, `对手调整 ${m.adjustCount} 次`].map((x) => `<span class="tag">${x}</span>`).join("");
   $("matchFeed").innerHTML = m.lines.map((line) => `<div class="round-line ${line.tone === "bad" ? "bad" : line.tone === "event" ? "event" : ""}">${line.text}</div>`).join("");
   $("matchFeed").scrollTop = $("matchFeed").scrollHeight;
+  $("nextRoundBtn").textContent = `第${m.round + 1}回合\n\n[继续]`;
 }
 
 function renderOpinion(s) {
@@ -428,7 +538,7 @@ function renderEnd(s) {
   $("seasonEnd").classList.toggle("hidden", s.phase !== "ended");
   if (s.phase !== "ended") return;
   $("endingTitle").textContent = s.wins >= 4 ? "那个被记住的赛季" : s.wins >= 2 ? "有名场面的危险项目" : "流量很高的事故现场";
-  $("endingBody").textContent = `5 周结束，战绩 ${s.wins}W-${s.losses}L。你留下的不是经营数值，而是：${s.bestMoment}`;
+  $("endingBody").textContent = `5 周结束，战绩 ${s.wins}W-${s.losses}L。这个赛季留下的镜头：${s.bestMoment}`;
   $("records").innerHTML = [["最终战绩", `${s.wins}W-${s.losses}L`], ["赛季记忆", s.bestMoment], ["最终名气", s.team.fame], ["粉丝支持", s.team.fans], ["战术熟练度", s.team.tactics], ["团队默契", s.team.chemistry]].map(([a, b]) => `<div class="record"><span>${a}</span><strong>${b}</strong></div>`).join("");
 }
 
@@ -437,9 +547,10 @@ function renderLog(s) {
 }
 
 $("startSeasonBtn").addEventListener("click", () => store.getState().startSeason());
-$("newSeasonBtn").addEventListener("click", () => { if (confirm("确定重开？当前存档会被覆盖。")) store.getState().newSeason(); });
+$("newSeasonBtn").addEventListener("click", () => { if (confirm("确定变阵重组？当前存档会被覆盖。")) store.getState().newSeason(); });
 $("restartBtn").addEventListener("click", () => store.getState().newSeason());
-$("clearLogBtn").addEventListener("click", () => store.getState().clearLog());
+$("continueBtn").addEventListener("click", () => store.getState().continueSeason());
+$("activePauseBtn").addEventListener("click", activePause);
 $("nextRoundBtn").addEventListener("click", playNextRound);
 $("nextWeekBtn").addEventListener("click", () => store.getState().nextWeek());
 

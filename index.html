@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Donk 又红温了？｜电竞局势模拟器</title>
+    <title>2026 IEM 上海｜电竞局势模拟器</title>
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
@@ -11,7 +11,7 @@
       <header class="header">
         <div>
           <p class="kicker">CS2 EMOTION SIM · FIRST TO 13 · 5 WEEKS</p>
-          <h1>Donk 又红温了？</h1>
+          <h1>2026 IEM 上海</h1>
         </div>
         <div class="save-pill" id="saveStatus">LocalStorage 自动存档</div>
       </header>
@@ -19,7 +19,7 @@
       <section class="setup" id="setupView">
         <div class="setup-copy">
           <p class="kicker">开局建队</p>
-          <h2>有限预算，选 5 个人。你买的不是数值，是故事炸点。</h2>
+          <h2>有限预算，选 5 个人。你买的是比赛里的关键镜头。</h2>
           <p>
             巨星能爆种，也会要资源；老将能稳住局面，也可能反应不过来。
             选满 5 人后进入 5 周短赛季。
@@ -94,14 +94,15 @@
             <h2 id="endingTitle"></h2>
             <p id="endingBody"></p>
             <div class="records" id="records"></div>
-            <button id="restartBtn" class="primary" type="button">开启新赛季</button>
+            <button id="continueBtn" class="primary" type="button">继续磨合</button>
+            <button id="restartBtn" class="secondary-action" type="button">变阵重组</button>
           </div>
         </section>
 
         <aside class="panel log-panel">
           <div class="panel-title">
             <span>电竞世界线</span>
-            <button id="clearLogBtn" class="text-btn" type="button">清日志</button>
+            <button id="activePauseBtn" class="text-btn" type="button">暂停 x3</button>
           </div>
           <div class="log" id="log"></div>
         </aside>
