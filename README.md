@@ -1,8 +1,8 @@
 # Donk 又红温了？
 
-![Version](https://img.shields.io/badge/version-v0.3.0-65f0a2)
+![Version](https://img.shields.io/badge/version-v0.3.1-65f0a2)
 
-当前版本：`v0.3.0`
+当前版本：`v0.3.1`
 
 一个纯前端的 CS2 电竞战队文字模拟器 MVP。
 
@@ -30,6 +30,7 @@
 - 赛后舆论生成器：论坛标题、比赛争议、选手评分
 - 赛季结束后生成结局、评价和纪录
 - 使用 Zustand vanilla 管理游戏状态
+- v0.3.1 起已移除外部 CDN 依赖，避免选手市场加载失败
 - 使用 LocalStorage 自动存档，刷新网页后继续游戏
 - 无后端，可直接部署到 GitHub Pages
 
