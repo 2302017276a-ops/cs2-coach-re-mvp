@@ -3,31 +3,48 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Donk 又红温了？｜电竞战队模拟器</title>
+    <title>Donk 又红温了？｜电竞局势模拟器</title>
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
     <main class="app">
       <header class="header">
         <div>
-          <p class="kicker">CS2 TEXT MANAGER · 5 WEEK SEASON</p>
+          <p class="kicker">CS2 EMOTION SIM · FIRST TO 13 · 5 WEEKS</p>
           <h1>Donk 又红温了？</h1>
         </div>
         <div class="save-pill" id="saveStatus">LocalStorage 自动存档</div>
       </header>
 
-      <section class="grid">
+      <section class="setup" id="setupView">
+        <div class="setup-copy">
+          <p class="kicker">开局建队</p>
+          <h2>有限预算，选 5 个人。你买的不是数值，是故事炸点。</h2>
+          <p>
+            巨星能爆种，也会要资源；老将能稳住局面，也可能反应不过来。
+            选满 5 人后进入 5 周短赛季。
+          </p>
+          <div class="budget-line">
+            <span id="budgetText">预算 ¥100</span>
+            <span id="pickedText">已选 0 / 5</span>
+          </div>
+          <button id="startSeasonBtn" class="primary" type="button" disabled>开始赛季</button>
+        </div>
+        <div class="market" id="market"></div>
+      </section>
+
+      <section class="grid hidden" id="gameView">
         <aside class="panel side">
           <div class="panel-title">
             <span>战队档案</span>
-            <button id="newSeasonBtn" class="text-btn" type="button">新赛季</button>
+            <button id="newSeasonBtn" class="text-btn" type="button">重开</button>
           </div>
 
           <div class="team-block">
             <div class="team-logo">DX</div>
             <div>
               <h2 id="teamName">Drama X</h2>
-              <p id="seasonLine">第 1 周 / 20 周</p>
+              <p id="seasonLine">第 1 周 / 5 周</p>
             </div>
           </div>
 
@@ -43,10 +60,10 @@
         <section class="panel main">
           <div class="terminal-head">
             <div>
-              <p class="kicker">每周循环</p>
+              <p class="kicker" id="phaseLabel">每周局势</p>
               <h2 id="weekTitle">选择本周行动</h2>
             </div>
-            <div class="scoreline" id="lastResult">等待赛季开始</div>
+            <div class="scoreline" id="lastResult">等待第一场比赛</div>
           </div>
 
           <div class="actions" id="actions"></div>
@@ -61,7 +78,15 @@
               <span id="matchName">本周比赛</span>
               <strong id="matchScore">0 : 0</strong>
             </div>
+            <div class="match-meta" id="matchMeta"></div>
             <div class="round-feed" id="matchFeed"></div>
+            <button id="nextRoundBtn" class="primary" type="button">点击进入下一回合</button>
+          </div>
+
+          <div class="opinion hidden" id="opinionBox">
+            <p class="kicker">赛后舆论生成器</p>
+            <div class="forum-card" id="forumCard"></div>
+            <button id="nextWeekBtn" class="primary" type="button">进入下一周</button>
           </div>
 
           <div class="season-end hidden" id="seasonEnd">
@@ -75,7 +100,7 @@
 
         <aside class="panel log-panel">
           <div class="panel-title">
-            <span>事件日志</span>
+            <span>电竞世界线</span>
             <button id="clearLogBtn" class="text-btn" type="button">清日志</button>
           </div>
           <div class="log" id="log"></div>
