@@ -1,597 +1,790 @@
-import { createStore } from "https://esm.sh/zustand@5.0.8/vanilla";
+function createStore(createState) {
+  let state;
+  const listeners = new Set();
+  const setState = (partial) => {
+    const next = typeof partial === "function" ? partial(state) : partial;
+    state = { ...state, ...next };
+    listeners.forEach((fn) => fn(state));
+  };
+  const getState = () => state;
+  state = createState(setState, getState);
+  return { getState, subscribe: (fn) => (listeners.add(fn), () => listeners.delete(fn)) };
+}
 
-const SAVE_KEY = "cs2-coach-season-v2";
-const SEASON_WEEKS = 20;
+const SAVE_KEY = "cs2-coach-season-v8-major-ui";
+const WIN_SCORE = 13;
+const SEASON_WEEKS = 5;
+const START_BUDGET = 128;
+const MIN_AVG_RATING = 74;
+const MIN_BALANCE_SCORE = 62;
+const $ = (id) => document.getElementById(id);
+const clamp = (n, min = 0, max = 100) => Math.max(min, Math.min(max, Math.round(n)));
+const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
+const shuffle = (arr) => [...arr].sort(() => Math.random() - 0.5);
+const clone = (v) => JSON.parse(JSON.stringify(v));
+
+const statTooltips = {
+  morale: "影响连败抗压、暂停收益、关键局发挥、红温概率和低胜率回合的翻盘概率。",
+  tactics: "影响默认成功率、转点质量、假打收益、道具协同，以及对手读懂你的速度。",
+  chemistry: "影响补枪、trade、双人配合、残局稳定性，以及阵容结构是否完整。",
+};
 
 const teamStatDefs = [
-  ["资金", "money", "¥"],
-  ["士气", "morale", ""],
-  ["名气", "fame", ""],
-  ["战术熟练度", "tactics", ""],
-  ["团队默契", "chemistry", ""],
-  ["粉丝支持", "fans", ""],
+  ["士气", "morale"],
+  ["战术执行", "tactics"],
+  ["团队默契", "chemistry"],
 ];
 
 const playerStatDefs = [
-  ["枪", "aim"],
-  ["脑", "sense"],
-  ["心", "mental"],
-  ["团", "teamwork"],
-  ["商", "market"],
-  ["疲", "fatigue"],
+  ["枪法", "aim"],
+  ["意识", "sense"],
+  ["心态", "mental"],
+  ["团队", "teamwork"],
+  ["残局", "clutch"],
 ];
 
-const basePlayers = [
-  { name: "donk", role: "突破手", trait: "红温巨星", aim: 98, sense: 80, mental: 68, teamwork: 62, market: 94, fatigue: 20 },
-  { name: "siuhy", role: "IGL", trait: "年轻指挥", aim: 76, sense: 88, mental: 82, teamwork: 86, market: 68, fatigue: 18 },
-  { name: "ropz", role: "自由人", trait: "冷静大脑", aim: 88, sense: 95, mental: 88, teamwork: 82, market: 78, fatigue: 16 },
-  { name: "flameZ", role: "辅助位", trait: "牺牲型拼图", aim: 80, sense: 78, mental: 82, teamwork: 92, market: 64, fatigue: 18 },
-  { name: "m0NESY", role: "狙击手", trait: "镜头制造机", aim: 96, sense: 86, mental: 78, teamwork: 68, market: 96, fatigue: 22 },
+const roleOrder = ["突破", "步枪", "狙击", "自由人", "辅助", "IGL"];
+const weaponByRole = {
+  突破: ["AK-47", "Galil", "MAC-10"],
+  步枪: ["AK-47", "M4A4", "M4A1-S"],
+  狙击: ["AWP", "SSG 08"],
+  自由人: ["AK-47", "M4A1-S", "MP9"],
+  辅助: ["M4A1-S", "FAMAS", "MP9"],
+  IGL: ["M4A4", "AK-47", "UMP-45"],
+};
+
+const hltvSilhouette = "https://www.hltv.org/img/static/player/player_silhouette.png";
+const hltvIds = {
+  ZywOo: "11893/zywoo",
+  donk: "21167/donk",
+  ropz: "8248/ropz",
+  m0NESY: "19230/m0nesy",
+  sh1ro: "16920/sh1ro",
+  NiKo: "3741/niko",
+  "910": "20101/910",
+  s1mple: "7998/s1mple",
+  device: "7592/device",
+  Twistzz: "10394/twistzz",
+};
+
+const rawPlayers = [
+  ["ZywOo", "步枪", 40, "全能核心", "六边形战士", 98, 96, 94, 88, 98, 22],
+  ["donk", "突破", 37, "枪法天花板", "开局撕口子", 100, 84, 78, 76, 92, 58],
+  ["ropz", "自由人", 34, "自由人教科书", "残局冷处理", 92, 98, 91, 92, 90, 19],
+  ["m0NESY", "狙击", 36, "狙击艺术家", "年轻但不手软", 98, 91, 84, 76, 93, 38],
+  ["sh1ro", "狙击", 28, "保守狙神", "稳定提款机", 86, 93, 92, 83, 91, 22],
+  ["molodoy", "辅助", 22, "体系绿叶", "愿意做脏活", 80, 82, 82, 92, 80, 27],
+  ["flameZ", "辅助", 22, "牺牲拼图", "补枪很干净", 78, 82, 82, 96, 80, 24],
+  ["frozen", "步枪", 25, "稳定器", "很少犯大错", 84, 84, 82, 90, 82, 27],
+  ["KSCERATO", "步枪", 25, "巴西一哥", "残局有重量", 86, 86, 85, 84, 88, 30],
+  ["Spinx", "步枪", 24, "以色列核心", "中后段收割", 85, 85, 82, 82, 84, 30],
+  ["Twistzz", "步枪", 23, "北美枪男", "爆头线漂亮", 86, 78, 78, 82, 79, 38],
+  ["mezii", "辅助", 18, "团队粘合剂", "愿意补洞", 74, 82, 84, 92, 78, 27],
+  ["Senzu", "步枪", 18, "亚洲核心", "上限很亮", 82, 76, 80, 78, 78, 30],
+  ["XANTARES", "突破", 21, "土耳其 aim 神", "对枪自信", 92, 72, 72, 66, 72, 44],
+  ["YEKINDAR", "突破", 22, "狂哥", "节奏很硬", 90, 74, 73, 73, 72, 41],
+  ["xertioN", "突破", 19, "冷静突破", "能打也能等", 80, 82, 82, 88, 80, 27],
+  ["torzsi", "狙击", 18, "体系狙", "吃资源但稳", 78, 82, 76, 80, 76, 38],
+  ["NiKo", "步枪", 30, "Major 魔咒", "一枪一个故事", 93, 86, 62, 74, 82, 57],
+  ["iM", "辅助", 18, "逆境爆发", "愿意撞墙", 76, 78, 82, 88, 78, 27],
+  ["b1t", "步枪", 24, "冠军拼图", "补枪很准", 84, 84, 84, 90, 82, 27],
+  ["HeavyGod", "步枪", 18, "高光低谷", "需要被接住", 82, 74, 72, 74, 72, 41],
+  ["kyousuke", "步枪", 17, "未来可期", "还没被写完", 82, 72, 74, 72, 72, 41],
+  ["w0nderful", "狙击", 20, "稳定成长", "不贪枪", 82, 84, 78, 82, 78, 38],
+  ["Wicadia", "步枪", 16, "土耳其枪手", "敢打敢输", 80, 72, 72, 72, 70, 41],
+  ["yuurih", "步枪", 18, "南美核心", "能补也能收", 80, 76, 76, 82, 74, 38],
+  ["Makazze", "辅助", 14, "国际纵队新血", "便宜但懂配合", 72, 72, 80, 82, 74, 30],
+  ["910", "狙击", 16, "蒙古狙击手", "有镜头感", 80, 72, 72, 72, 72, 41],
+  ["MATYS", "步枪", 16, "年轻步枪手", "有冲劲", 80, 72, 72, 72, 70, 41],
+  ["tN1R", "步枪", 16, "Spirit 新血", "敢补枪", 80, 72, 72, 74, 72, 41],
+  ["latto", "辅助", 14, "南美绿叶", "不抢镜头", 72, 72, 80, 82, 74, 30],
+  ["s1mple", "狙击", 34, "CS:GO GOAT", "情绪也是武器", 98, 91, 76, 68, 86, 44],
+  ["device", "狙击", 28, "丹麦传奇", "像钟一样准", 86, 92, 86, 84, 86, 30],
+  ["huNter-", "步枪", 22, "巴尔干核心", "经验很厚", 82, 82, 76, 82, 78, 38],
+  ["broky", "狙击", 22, "松弛狙击", "敢在残局等", 82, 82, 76, 80, 78, 38],
+  ["rain", "突破", 23, "十年忠诚", "大赛不怯", 82, 78, 84, 90, 82, 27],
+  ["Magisk", "步枪", 24, "冠军拼图", "纪律性强", 82, 84, 84, 90, 82, 27],
+  ["cadiaN", "IGL", 24, "争议领袖", "会把声音拉满", 72, 92, 76, 86, 80, 38],
+  ["jks", "自由人", 23, "冷面杀手", "不说废话", 82, 84, 84, 90, 82, 27],
+  ["Jimpphat", "步枪", 18, "18岁冠军脸", "很稳", 80, 76, 82, 82, 78, 30],
+  ["EliGE", "步枪", 23, "北美荣光", "压枪很硬", 84, 76, 82, 88, 80, 27],
 ];
 
-const actions = [
-  {
-    id: "train",
-    title: "📋 高强度战术训练",
-    text: "练地图池、默认控图和暂停后的执行。选手会累，但战术会更像一支队伍。",
-    effect: { tactics: 9, chemistry: 3, morale: -2 },
-    fatigue: 8,
-  },
-  {
-    id: "rest",
-    title: "🧊 放假半天",
-    text: "减少疲劳，保护心态。代价是这周看起来没什么进步，老板会皱眉。",
-    effect: { morale: 8, chemistry: 3, fame: -1 },
-    fatigue: -12,
-  },
-  {
-    id: "media",
-    title: "📱 直播营业",
-    text: "提高名气和粉丝支持，但直播间总有机会制造新素材。",
-    effect: { fame: 8, fans: 9, money: 3, tactics: -2 },
-    fatigue: 4,
-  },
-  {
-    id: "psych",
-    title: "🧠 心态会议",
-    text: "教练组单独约谈核心选手，试图让红温变成输出，而不是爆炸。",
-    effect: { morale: 6, chemistry: 4, tactics: 1 },
-    fatigue: -4,
-  },
-  {
-    id: "scrim",
-    title: "🔥 约顶级队训练赛",
-    text: "赢了自信爆棚，输了全队沉默。无论如何，比赛内容会很真实。",
-    effect: { tactics: 5, fame: 2, morale: -3 },
-    fatigue: 10,
-  },
-  {
-    id: "sponsor",
-    title: "💰 安抚赞助商",
-    text: "拿钱、拍照、说漂亮话。战队不是只靠爆头活着，有时还靠 PPT。",
-    effect: { money: 10, fame: 4, morale: -3, fans: -1 },
-    fatigue: 3,
-  },
-];
-
-const randomEvents = [
-  {
-    id: "donk_tilt",
-    title: "🔥 donk 又红温了？",
-    condition: (s) => avgFatigue(s.players) > 42 || s.team.morale < 48,
-    weight: (s) => 8 + Math.max(0, 55 - s.team.morale) / 3 + avgFatigue(s.players) / 8,
-    text: "训练室门没关严，外面的人都听见 donk 说：如果下一张图还让我等烟散，我不如去打死斗。",
-    effect: { morale: -6, chemistry: -5, fame: 5, tactics: 2 },
-    player: { name: "donk", mental: -5, fatigue: 6 },
-  },
-  {
-    id: "stream_fail",
-    title: "📱 直播事故",
-    condition: (s) => s.team.fame > 38,
-    weight: (s) => 9 + s.team.fame / 10,
-    text: "队员直播时嘴快，把训练赛比分说漏了。弹幕笑疯了，对手分析师也笑疯了。",
-    effect: { fame: 8, fans: 4, tactics: -7, morale: -3 },
-  },
-  {
-    id: "strat_leak",
-    title: "📋 战术泄露",
-    condition: (s) => s.team.tactics > 50,
-    weight: (s) => 7 + s.team.tactics / 14,
-    text: "一张战术截图流到社区。好消息是大家夸你有东西，坏消息是对手也看见了。",
-    effect: { tactics: -9, fame: 5, fans: 2 },
-  },
-  {
-    id: "sponsor_pressure",
-    title: "💰 赞助商施压",
-    condition: (s) => s.team.money < 55 || s.team.fame > 60,
-    weight: (s) => 10 + Math.max(0, 60 - s.team.money) / 5,
-    text: "赞助商希望 m0NESY 多直播两小时。你说他要训练，赞助商说他们也要 KPI。",
-    effect: { money: 8, morale: -5, fans: 3 },
-    player: { name: "m0NESY", fatigue: 7, mental: -3 },
-  },
-  {
-    id: "throw_mood",
-    title: "🪑 选手摆烂",
-    condition: (s) => s.team.morale < 45 || s.team.chemistry < 42,
-    weight: (s) => 8 + Math.max(0, 50 - s.team.chemistry) / 3,
-    text: "有人训练赛只报了三次信息，其中两次是“我白给了”。录像里看不出战术，只看得出不想上班。",
-    effect: { morale: -7, chemistry: -6, tactics: -3 },
-    fatigueAll: -3,
-  },
-  {
-    id: "rookie_pop",
-    title: "✨ 天才新人爆发",
-    condition: (s) => s.week > 2,
-    weight: (s) => 8 + s.team.chemistry / 18,
-    text: "二队小孩训练赛打出 31 杀，主力席突然安静。你第一次认真思考：替补席是不是太短了？",
-    effect: { fame: 5, fans: 7, morale: 4 },
-    player: { name: "flameZ", aim: 3, mental: 3 },
-  },
-  {
-    id: "niko_meme",
-    title: "😶 社区开始复读 NiKo 梗",
-    condition: (s) => s.losses > s.wins,
-    weight: (s) => 7 + s.losses,
-    text: "虽然 NiKo 不在你队里，但弹幕还是刷了。互联网的记忆不讲逻辑，只讲节目效果。",
-    effect: { fame: 6, fans: -4, morale: -3 },
-  },
-  {
-    id: "igl_authority",
-    title: "🎧 IGL 权威回来了",
-    condition: (s) => s.team.tactics > 58 && s.team.chemistry > 50,
-    weight: (s) => 6 + s.team.tactics / 16,
-    text: "siuhy 复盘时暂停了三次录像，没人打断。他说下一场这么打，所有人都点头。",
-    effect: { tactics: 6, chemistry: 5, morale: 2 },
-    player: { name: "siuhy", sense: 3, mental: 2 },
-  },
-  {
-    id: "fans_back",
-    title: "💚 粉丝逆风护队",
-    condition: (s) => s.team.fans > 55 && s.team.morale < 55,
-    weight: (s) => 8 + s.team.fans / 16,
-    text: "输比赛后，评论区竟然没有爆炸。粉丝剪了一个《我们还会回来》的视频，全队都看完了。",
-    effect: { morale: 8, chemistry: 3, fans: 2 },
-  },
-  {
-    id: "money_alarm",
-    title: "🏢 财务警报",
-    condition: (s) => s.team.money < 35,
-    weight: (s) => 18,
-    text: "老板发来一句：如果下周还没有结果，我们就要讨论预算。没有标点，但很有杀伤力。",
-    effect: { morale: -5, tactics: -2, money: -2 },
-  },
-];
-
-const killLines = [
-  "{p} 第一枪把对面定在烟边，镜头甚至没来得及切。",
-  "{p} 残局 1v2，先骗拆再横拉，语音里有人小声说了句：卧槽。",
-  "{p} 的补枪慢了半秒，半秒足够把回合送走。",
-  "{p} 前压拿到信息，但撤退路线被燃烧弹切断。",
-  "{p} 没等 call 就干拉出去。坏消息是不纪律，好消息是杀了两个。",
-  "{p} 空了一枪，弹幕已经开始提前打分。",
-];
-
-const tacticLines = [
-  "默认控图很干净，像训练室里排练过二十遍。",
-  "B 点爆弹晚了 1 秒，所有人都知道这 1 秒是谁的问题。",
-  "对手赌对了你的提速 timing，战术本被翻到了同一页。",
-  "暂停后的第一回合执行成功，教练席终于像有人在上班。",
-  "队伍选择强起，四把短枪打出了五个人的心率。",
-];
-
-const mentalLines = [
-  "donk 的语音音量上来了，准星也上来了。",
-  "m0NESY 笑了一下，这通常意味着有人要进集锦。",
-  "siuhy 连续说了三遍慢点，第三遍已经不太像请求。",
-  "ropz 绕后成功，但包点已经没人能等他了。",
-  "flameZ 又给队友丢出一颗好闪，数据表不会记得，队友会。",
-];
-
-const decisions = [
-  {
-    prompt: "关键节点：队伍连丢两段，donk 开始在语音里顶 call。你怎么处理？",
-    options: [
-      { label: "叫暂停，压住情绪", effect: { morale: 3, tactics: 5, chemistry: 2 }, player: { name: "donk", mental: -2 }, text: "你叫了暂停，第一句话不是战术，是让所有人把耳机音量调低。" },
-      { label: "放权 donk，给他资源", effect: { fame: 4, fans: 3, chemistry: -4 }, player: { name: "donk", aim: 3, fatigue: 5 }, text: "你把第一枪交给 donk。战术变薄了，但空气变烫了。" },
-      { label: "让 siuhy 继续 call", effect: { tactics: 6, chemistry: 4, morale: -2 }, player: { name: "siuhy", mental: 3 }, text: "你公开支持 IGL。有人沉默，但下一回合至少所有人走在同一张地图上。" },
-    ],
-  },
-  {
-    prompt: "赛点前：经济很差，但对手也开始发抖。你要赌吗？",
-    options: [
-      { label: "强起，抢节奏", effect: { fame: 5, fans: 4, morale: -3 }, text: "你选择把下周的血压也借到这一回合。弹幕喜欢，财务不一定。" },
-      { label: "保守 eco，打最终局", effect: { tactics: 4, morale: 2, fans: -2 }, text: "你选择活到下一回合。它不酷，但它像一个成年人。" },
-      { label: "临时换战术，打冷门点", effect: { tactics: -2, chemistry: 3, fame: 2 }, text: "你合上旧战术本，画了一个连你自己都觉得有点野的箭头。" },
-    ],
-  },
-];
-
-const $ = (id) => document.getElementById(id);
-const clamp = (value, min = 0, max = 100) => Math.max(min, Math.min(max, Math.round(value)));
-const pick = (items) => items[Math.floor(Math.random() * items.length)];
-const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-
-function avgFatigue(players) {
-  return players.reduce((sum, p) => sum + p.fatigue, 0) / players.length;
+function eliteTax(price) {
+  if (price >= 36) return 8 + (price - 36) * 3;
+  if (price >= 30) return 4 + (price - 30) * 1.5;
+  return 0;
 }
+
+const marketPlayers = rawPlayers.map(([name, role, price, tag, voice, aim, sense, mental, teamwork, clutch, tilt]) => {
+  const rating = Math.round((aim + sense + mental + teamwork + clutch) / 5);
+  return {
+    name,
+    role,
+    basePrice: price,
+    price: Math.round(price + eliteTax(price)),
+    tag,
+    voice,
+    aim,
+    sense,
+    mental,
+    teamwork,
+    clutch,
+    tilt,
+    fatigue: 18,
+    rating,
+    photo: hltvSilhouette,
+    hltv: `https://www.hltv.org/player/${hltvIds[name] || ""}`,
+  };
+});
+
+const opponents = [
+  { name: "Vitality", style: "纪律队", note: "稳定、纪律、明星不讲理", power: 88, star: "ZywOo", patterns: ["默认控图", "A区夹击", "慢速转点"], adaptSpeed: 3, tells: ["apEX开始反复叫暂停前压", "中路默认更慢", "ZywOo开始要第一身位"] },
+  { name: "FaZe Clan", style: "慢打队", note: "宿命感很重，残局很硬", power: 84, star: "ropz", patterns: ["慢控两翼", "中期爆弹", "残局拉扯"], adaptSpeed: 4, tells: ["ropz开始单摸断后", "雨神前顶拿信息", "默认时间被压到最后二十秒"] },
+  { name: "Falcons", style: "明星单核队", note: "资源向明星倾斜", power: 86, star: "NiKo", patterns: ["明星开路", "双人补枪", "强起找枪"], adaptSpeed: 3, tells: ["NiKo连续要第一枪位", "对手开始避开你的强点", "中路烟后有人反架"] },
+  { name: "Spirit", style: "激进队", note: "对面也有一个不想等烟散的人", power: 85, star: "donk", patterns: ["开局前压", "反清边路", "快提包点"], adaptSpeed: 3, tells: ["donk的出生点开始被保护", "对手连续反清同一片区域", "节奏突然变慢"] },
+  { name: "MOUZ", style: "体系队", note: "纸面不夸张，但很会让强队难受", power: 82, star: "xertioN", patterns: ["三人控图", "假打转点", "残局双架"], adaptSpeed: 4, tells: ["两颗闪光总在同一秒爆", "默认站位开始针对你的补防", "包点不再轻易露单人"] },
+  { name: "G2", style: "心理战队", note: "暂停很慢，假动作很多", power: 84, star: "m0NESY", patterns: ["假打", "中路提速", "狙击找首杀"], adaptSpeed: 3, tells: ["m0NESY开始主动找镜头", "对手突然不交第一套道具", "回合前半段声音变少"] },
+];
+
+const weeklyDeck = [
+  { id: "discipline", title: "强调纪律", text: "默认控图、补枪、听 IGL。暂停后更容易连续执行同一套结构。", effect: { tactics: 8, chemistry: 3, morale: -2 }, style: { discipline: 8 } },
+  { id: "gamble", title: "放手赌点", text: "训练非常规站位。打穿对手，或者变成论坛素材。", effect: { tactics: -2, morale: 2 }, style: { gamble: 9 } },
+  { id: "antiStar", title: "针对明星", text: "双架、反清、假信息，全部往对面明星脸上招呼。", effect: { tactics: 5, chemistry: -1 }, style: { antiStar: 9 } },
+  { id: "speed", title: "直接提速", text: "不让对手舒服架默认。你们会更像刀，也更像赌徒。", effect: { morale: 4, tactics: -3 }, style: { speed: 9 } },
+  { id: "calm", title: "安抚红温", text: "把红温留给准星，不留给语音。关键局心态更稳。", effect: { morale: 8, chemistry: 4 }, style: { calm: 9 } },
+  { id: "info", title: "信息差三架位", text: "练三架、反摸和假脚步。对手会开始怀疑默认位置。", effect: { tactics: 7, chemistry: 2 }, style: { info: 8 } },
+];
+
+const baseInterventions = [
+  { label: "叫暂停，强调纪律", style: { discipline: 8, calm: 2 }, effect: { tactics: 3, morale: 1 }, risk: "如果下一回合输，士气额外 -5。", backfire: { morale: -5 }, text: "暂停后，队伍连续三次补枪到位。对手第一次没有读到你的默认。" },
+  { label: "直接提速", style: { speed: 9 }, effect: { morale: 2, tactics: -1 }, risk: "如果被接住，战术执行 -4。", backfire: { tactics: -4 }, text: "你让队伍把默认撕掉。下一回合，五个人像一把没上保险的刀。" },
+  { label: "强起，资源给明星", style: { gamble: 8 }, effect: { morale: 1, chemistry: -4 }, risk: "如果失败，团队默契 -5，经济继续崩。", backfire: { chemistry: -5 }, text: "战术板合上，资源集中到第一枪位。队友都知道这一回合是在赌人。" },
+  { label: "非常规赌点", style: { gamble: 10, info: 3 }, effect: { tactics: -1, morale: 2 }, risk: "如果赌错，士气 -4，对手适应 +1。", backfire: { morale: -4 }, text: "你赌了一个没人敢赌的位置。对手搜点慢了半秒，半秒就是枪线。" },
+  { label: "针对对面明星", style: { antiStar: 10, discipline: 2 }, effect: { tactics: 2, morale: 1 }, risk: "如果明星仍然拿首杀，士气 -6。", backfire: { morale: -6 }, text: "两颗闪和一个人都丢给对面明星。围剿开始了。" },
+  { label: "安抚红温选手", style: { calm: 10 }, effect: { morale: 4, chemistry: 3 }, risk: "如果下一回合仍然白给，暂停收益减半。", backfire: { morale: -3 }, text: "你没有骂 {hot}，只说：下一枪你来开，但报点要报。语音降温了，准星没降。" },
+];
+
+const scriptProfiles = {
+  "开局暴打": { phases: [{ rounds: [1, 5], bias: 8, nodes: ["duel", "info"] }, { rounds: [6, 10], bias: 0, nodes: ["eco", "morale"] }, { rounds: [11, 24], bias: -4, nodes: ["clutch", "duel"] }], decisionRounds: [3, 7, 11] },
+  "被碾压": { phases: [{ rounds: [1, 8], bias: -12, nodes: ["eco", "morale"] }, { rounds: [9, 12], bias: -3, nodes: ["info", "duel"] }, { rounds: [13, 24], bias: 4, nodes: ["clutch", "gamble"] }], decisionRounds: [2, 5, 9] },
+  "经济崩盘": { phases: [{ rounds: [1, 6], bias: -6, nodes: ["eco"] }, { rounds: [7, 12], bias: -2, nodes: ["info", "eco"] }, { rounds: [13, 24], bias: 2, nodes: ["clutch", "morale"] }], decisionRounds: [3, 6, 10] },
+  "加时鏖战": { phases: [{ rounds: [1, 8], bias: 0, nodes: ["duel", "info"] }, { rounds: [9, 16], bias: 0, nodes: ["eco", "morale"] }, { rounds: [17, 24], bias: 0, nodes: ["clutch"] }], decisionRounds: [4, 8, 12] },
+  "赌点翻盘": { phases: [{ rounds: [1, 7], bias: -5, nodes: ["morale", "eco"] }, { rounds: [8, 13], bias: 3, nodes: ["gamble", "info"] }, { rounds: [14, 24], bias: 5, nodes: ["clutch", "gamble"] }], decisionRounds: [4, 8, 11] },
+  "宿命局": { phases: [{ rounds: [1, 24], bias: 0, nodes: ["duel", "clutch", "info", "morale"] }], decisionRounds: [3, 8, 12] },
+};
+
+const nodes = {
+  eco: ["经济局", "对手下回合大概率全甲步枪。"],
+  clutch: ["关键残局", "语音里的重量像十个人。"],
+  timeout: ["暂停窗口", "镜头切到教练席，所有人都在等你。"],
+  morale: ["士气波动", "这一分会影响谁还愿意相信谁。"],
+  gamble: ["赌点", "另一侧空得能听见风声。"],
+  info: ["信息误判", "对手给了假脚步，你要判断是不是真信息。"],
+  duel: ["明星对位", "对面明星开始要球，这回合像单挑。"],
+};
 
 function createInitialState() {
   return {
+    phase: "setup",
+    budget: START_BUDGET,
+    pickedIds: [],
     week: 1,
-    team: {
-      money: 65,
-      morale: 58,
-      fame: 42,
-      tactics: 50,
-      chemistry: 52,
-      fans: 46,
-    },
-    players: structuredClone(basePlayers),
-    logs: [
-      {
-        week: 1,
-        title: "赛季开始",
-        text: "老板只给了 20 周。你看着首发名单，心里很清楚：这个项目成败不取决于谁最会说话，取决于谁先红温。",
-      },
-    ],
+    team: { morale: 55, tactics: 50, chemistry: 50 },
+    players: [],
+    weeklyActions: [],
     currentMatch: null,
+    pendingDecision: null,
+    lastOpinion: null,
+    logs: [],
     wins: 0,
     losses: 0,
-    bestStreak: 0,
-    currentStreak: 0,
-    tiltCount: 0,
-    famousMoments: [],
+    bestMoment: "还没有名场面",
     seasonEnded: false,
-    lastResult: "等待第一场比赛",
-    busy: false,
-    savedAt: Date.now(),
+    lastResult: "等待建队",
   };
 }
 
-function loadSavedState() {
+function loadState() {
   try {
     const raw = localStorage.getItem(SAVE_KEY);
-    if (!raw) return createInitialState();
-    const saved = JSON.parse(raw);
-    return { ...createInitialState(), ...saved, busy: false, currentMatch: null };
+    return raw ? { ...createInitialState(), ...JSON.parse(raw), pendingDecision: null } : createInitialState();
   } catch {
     return createInitialState();
   }
 }
 
-const store = createStore((set, get) => ({
-  ...loadSavedState(),
-  startNewSeason: () => set(createInitialState()),
-  clearLog: () => set({ logs: [] }),
-  setBusy: (busy) => set({ busy }),
-  addLog: (title, text) =>
-    set((s) => ({
-      logs: [{ week: s.week, title, text }, ...s.logs].slice(0, 80),
-    })),
-  applyTeamEffect: (effect = {}) =>
-    set((s) => ({
-      team: Object.fromEntries(
-        Object.entries(s.team).map(([key, value]) => [key, key === "money" ? clamp(value + (effect[key] || 0), 0, 999) : clamp(value + (effect[key] || 0))])
-      ),
-    })),
-  applyPlayerEffect: (effect = {}) =>
-    set((s) => ({
-      players: s.players.map((player) => {
-        if (effect.name && effect.name !== player.name) return player;
-        const next = { ...player };
-        for (const [key, value] of Object.entries(effect)) {
-          if (key !== "name" && key in next) next[key] = clamp(next[key] + value);
-        }
-        return next;
-      }),
-    })),
-  applyFatigueAll: (amount) =>
-    set((s) => ({
-      players: s.players.map((player) => ({ ...player, fatigue: clamp(player.fatigue + amount) })),
-    })),
-  setCurrentMatch: (currentMatch) => set({ currentMatch }),
-  appendMatchLine: (line) =>
-    set((s) => ({
-      currentMatch: {
-        ...s.currentMatch,
-        lines: [...s.currentMatch.lines, line],
-      },
-    })),
-  updateScore: (us, them) =>
-    set((s) => ({
-      currentMatch: { ...s.currentMatch, us, them },
-    })),
-  finishWeek: (won, summary) =>
-    set((s) => {
-      const wins = s.wins + (won ? 1 : 0);
-      const losses = s.losses + (won ? 0 : 1);
-      const currentStreak = won ? s.currentStreak + 1 : 0;
-      const nextWeek = s.week + 1;
-      const seasonEnded = nextWeek > SEASON_WEEKS;
-      return {
-        wins,
-        losses,
-        currentStreak,
-        bestStreak: Math.max(s.bestStreak, currentStreak),
-        week: seasonEnded ? s.week : nextWeek,
-        seasonEnded,
-        currentMatch: null,
-        lastResult: summary,
-        busy: false,
-      };
-    }),
-  markTilt: () => set((s) => ({ tiltCount: s.tiltCount + 1 })),
-  addMoment: (moment) => set((s) => ({ famousMoments: [moment, ...s.famousMoments].slice(0, 8) })),
+const store = createStore((set) => ({
+  ...loadState(),
+  togglePick: (name) => set((s) => {
+    const player = marketPlayers.find((p) => p.name === name);
+    const selected = s.pickedIds.includes(name);
+    if (selected) return { pickedIds: s.pickedIds.filter((id) => id !== name), budget: s.budget + player.price };
+    if (s.pickedIds.length >= 5 || s.budget < player.price) return {};
+    return { pickedIds: [...s.pickedIds, name], budget: s.budget - player.price };
+  }),
+  startSeason: () => set((s) => {
+    const players = s.pickedIds.map((id) => ({ ...clone(marketPlayers.find((p) => p.name === id)), history: emptyHistory() }));
+    if (!canStartRoster(players).ok) return {};
+    return {
+      phase: "week",
+      players,
+      weeklyActions: rollWeeklyActions(),
+      logs: [{ week: 1, title: "建队完成", text: `你选下了 ${players.map((p) => p.name).join("、")}。这不是一神带四坑，而是一套能执行暂停的结构。` }],
+      lastResult: "第 1 周：选择本周方向",
+    };
+  }),
+  newSeason: () => set(createInitialState()),
+  continueSeason: () => set((s) => ({
+    phase: "week",
+    week: 1,
+    team: applyTeamEffect(s.team, { morale: 8, chemistry: 8, tactics: 4 }),
+    players: s.players.map((p) => ({ ...p, fatigue: clamp(p.fatigue - 10), teamwork: clamp(p.teamwork + 2) })),
+    weeklyActions: rollWeeklyActions(),
+    currentMatch: null,
+    pendingDecision: null,
+    lastOpinion: null,
+    logs: [{ week: 1, title: "继续磨合", text: "你没有拆队。队员理解这是信任，也知道下一次崩盘要自己扛。" }, ...s.logs].slice(0, 80),
+    wins: 0,
+    losses: 0,
+    seasonEnded: false,
+    lastResult: "新 5 周：继续磨合",
+  })),
+  addLog: (title, text) => set((s) => ({ logs: [{ week: s.week, title, text }, ...s.logs].slice(0, 80) })),
+  startMatch: (action) => set((s) => startMatchState(s, action)),
+  appendLine: (line) => set((s) => ({ currentMatch: { ...s.currentMatch, lines: [...s.currentMatch.lines, line] } })),
+  updateMatch: (patch) => set((s) => ({ currentMatch: { ...s.currentMatch, ...patch } })),
+  updateTeam: (team) => set({ team }),
+  setDecision: (decision) => set({ pendingDecision: decision }),
+  applyDecision: (option) => set((s) => applyDecisionState(s, option)),
+  finishMatch: (won, opinion, moment) => set((s) => {
+    const nextWeek = s.week + 1;
+    const ended = nextWeek > SEASON_WEEKS;
+    return {
+      phase: ended ? "ended" : "post",
+      wins: s.wins + (won ? 1 : 0),
+      losses: s.losses + (won ? 0 : 1),
+      lastOpinion: opinion,
+      bestMoment: moment,
+      seasonEnded: ended,
+      lastResult: `${won ? "胜利" : "失利"} ${s.currentMatch.us}:${s.currentMatch.them}`,
+    };
+  }),
+  nextWeek: () => set((s) => ({
+    phase: "week",
+    week: s.week + 1,
+    weeklyActions: rollWeeklyActions(),
+    currentMatch: null,
+    pendingDecision: null,
+    lastOpinion: null,
+    lastResult: `第 ${s.week + 1} 周：选择本周方向`,
+  })),
 }));
 
 store.subscribe((state) => {
-  const toSave = { ...state, busy: false, currentMatch: null, savedAt: Date.now() };
-  localStorage.setItem(SAVE_KEY, JSON.stringify(toSave));
+  localStorage.setItem(SAVE_KEY, JSON.stringify({ ...state, pendingDecision: null }));
   render();
 });
 
-function weightedEvent(state) {
-  const candidates = randomEvents
-    .filter((event) => event.condition(state))
-    .map((event) => ({ event, weight: Math.max(1, event.weight(state)) }));
-  const pool = candidates.length ? candidates : randomEvents.map((event) => ({ event, weight: 1 }));
-  const total = pool.reduce((sum, item) => sum + item.weight, 0);
-  let roll = Math.random() * total;
-  for (const item of pool) {
-    roll -= item.weight;
-    if (roll <= 0) return item.event;
-  }
-  return pool[0].event;
+function emptyHistory() {
+  return { clutchWins: 0, clutchLosses: 0, hotStreaks: 0, tiltMoments: 0, kills: 0, deaths: 0 };
+}
+
+function rollWeeklyActions() {
+  return shuffle(weeklyDeck).slice(0, 3);
+}
+
+function applyTeamEffect(team, effect) {
+  return Object.fromEntries(Object.entries(team).map(([k, v]) => [k, clamp(v + (effect[k] || 0))]));
+}
+
+function mergeStyle(base = {}, add = {}) {
+  const next = { ...base };
+  Object.entries(add).forEach(([k, v]) => (next[k] = (next[k] || 0) + v));
+  return next;
+}
+
+function avg(players, keys) {
+  if (!players.length) return 0;
+  return players.reduce((sum, p) => sum + keys.reduce((s, k) => s + (p[k] || 0), 0) / keys.length, 0) / players.length;
+}
+
+function rosterRating(players) {
+  return Math.round(avg(players, ["aim", "sense", "mental", "teamwork", "clutch"]));
+}
+
+function balanceScore(players) {
+  if (!players.length) return 0;
+  const roles = new Set(players.map((p) => p.role));
+  const hasIglOrSupport = players.some((p) => ["IGL", "辅助"].includes(p.role));
+  const hasAwper = players.some((p) => p.role === "狙击");
+  const hasEntry = players.some((p) => p.role === "突破");
+  const lowFloorPenalty = Math.max(0, 72 - Math.min(...players.map((p) => p.rating))) * 2;
+  return clamp(roles.size * 16 + (hasIglOrSupport ? 18 : 0) + (hasAwper ? 14 : 0) + (hasEntry ? 12 : 0) - lowFloorPenalty);
+}
+
+function canStartRoster(players) {
+  if (players.length !== 5) return { ok: false, reason: "需要选满 5 人" };
+  const rating = rosterRating(players);
+  const balance = balanceScore(players);
+  const lowCount = players.filter((p) => p.rating < MIN_AVG_RATING).length;
+  if (rating < MIN_AVG_RATING) return { ok: false, reason: `最低平均 rating ${MIN_AVG_RATING}，当前 ${rating}` };
+  if (lowCount > 2) return { ok: false, reason: `低于 ${MIN_AVG_RATING} rating 的选手最多 2 人，当前 ${lowCount} 人` };
+  if (balance < MIN_BALANCE_SCORE) return { ok: false, reason: `阵容结构不足，当前平衡 ${balance}` };
+  return { ok: true, reason: "结构完整，可以开赛" };
+}
+
+function startMatchState(s, action) {
+  const opponent = s.week === 5 ? opponents[0] : pick(opponents);
+  const script = s.week === 5 ? "宿命局" : pick(Object.keys(scriptProfiles));
+  return {
+    phase: "match",
+    team: applyTeamEffect(s.team, action.effect),
+    currentMatch: {
+      opponent,
+      script,
+      map: pick(["Mirage", "Inferno", "Nuke", "Ancient", "Anubis", "Dust2"]),
+      round: 0,
+      us: 0,
+      them: 0,
+      economyUs: 50,
+      economyThem: 50,
+      coach: { ...action.style },
+      timeouts: 3,
+      adjustCount: 0,
+      usedDecisionRounds: [],
+      pendingConsequences: [],
+      opponentState: { pattern: 0, adaptedTo: [], roundsSinceAdapt: 0, recent: [] },
+      playerState: initPlayerState(s.players),
+      lines: [{ tone: "event", text: `赛事导播切入 ${opponent.name}。本图 ${script}，本周方向是「${action.title}」。` }],
+    },
+    lastResult: `${opponent.name} / ${script}`,
+  };
+}
+
+function initPlayerState(players) {
+  return players.map((p, index) => ({
+    name: p.name,
+    role: p.role,
+    side: index % 2 === 0 ? "CT" : "T",
+    hp: 100,
+    alive: true,
+    weapon: pick(weaponByRole[p.role] || ["AK-47", "M4A1-S"]),
+    armor: true,
+    helmet: p.role !== "辅助" || Math.random() > 0.35,
+    kills: 0,
+    deaths: 0,
+  }));
+}
+
+function resetRoundPlayerState(playerState, economy) {
+  return playerState.map((p) => ({
+    ...p,
+    side: p.side === "CT" ? "T" : "CT",
+    hp: 100,
+    alive: true,
+    weapon: economy < 35 ? pick(["Deagle", "Tec-9", "Five-SeveN", "MP9"]) : pick(weaponByRole[p.role] || ["AK-47"]),
+    armor: economy >= 30 || Math.random() > 0.35,
+    helmet: economy >= 45 || Math.random() > 0.5,
+  }));
 }
 
 function teamPower(state) {
-  const playerPower =
-    state.players.reduce((sum, p) => {
-      const fatiguePenalty = p.fatigue * 0.32;
-      return sum + p.aim * 0.3 + p.sense * 0.22 + p.mental * 0.18 + p.teamwork * 0.18 + p.market * 0.04 - fatiguePenalty;
-    }, 0) / state.players.length;
-
-  return (
-    playerPower * 0.58 +
-    state.team.tactics * 0.16 +
-    state.team.morale * 0.12 +
-    state.team.chemistry * 0.1 +
-    state.team.fans * 0.04
-  );
+  const structural = balanceScore(state.players) * 0.08;
+  return avg(state.players, ["aim", "sense", "mental", "teamwork", "clutch"]) * 0.64 + state.team.morale * 0.12 + state.team.tactics * 0.14 + state.team.chemistry * 0.12 + structural;
 }
 
-function applyEffectBundle(bundle) {
-  const state = store.getState();
-  state.applyTeamEffect(bundle.effect);
-  if (bundle.player) state.applyPlayerEffect(bundle.player);
-  if (bundle.fatigueAll) state.applyFatigueAll(bundle.fatigueAll);
+function getCurrentPhase(m) {
+  return scriptProfiles[m.script].phases.find((p) => m.round + 1 >= p.rounds[0] && m.round + 1 <= p.rounds[1]) || scriptProfiles[m.script].phases.at(-1);
 }
 
-async function runWeek(actionId) {
-  const state = store.getState();
-  if (state.busy || state.seasonEnded) return;
-  const action = actions.find((item) => item.id === actionId);
-  state.setBusy(true);
-  state.applyTeamEffect(action.effect);
-  state.applyFatigueAll(action.fatigue);
-  state.addLog("本周行动", `${action.title}：${action.text}`);
-
-  await sleep(450);
-  const event = weightedEvent(store.getState());
-  applyEffectBundle(event);
-  if (event.id === "donk_tilt") store.getState().markTilt();
-  store.getState().addLog(event.title, event.text);
-
-  await sleep(650);
-  await simulateMatch(event);
+function nodeForRound(m) {
+  if (m.round === 0) return "timeout";
+  if (Math.max(m.us, m.them) >= 11) return "clutch";
+  if (m.economyUs < 35 || m.economyThem < 35) return "eco";
+  const phase = getCurrentPhase(m);
+  if (phase?.nodes?.length) return pick(phase.nodes);
+  if (Math.abs(m.us - m.them) >= 5) return m.us < m.them ? "morale" : "info";
+  return pick(["duel", "gamble", "info", "eco", "morale"]);
 }
 
-async function simulateMatch(event) {
-  const state = store.getState();
-  const opponent = pick(["FaZe Clan", "Falcons", "Vitality", "MOUZ", "NAVI", "Spirit", "G2", "FURIA"]);
-  const map = pick(["Mirage", "Inferno", "Nuke", "Ancient", "Anubis", "Dust2"]);
-  store.getState().setCurrentMatch({
-    opponent,
-    map,
-    us: 0,
-    them: 0,
-    lines: [],
-  });
+function tacticBonus(node, coach, opponent, team) {
+  let b = 0;
+  if (node === "eco") b += (coach.economy || 0) - 2 + (team.tactics - 50) * 0.04;
+  if (node === "gamble") b += (coach.gamble || 0) - (opponent.style === "纪律队" ? 3 : 0);
+  if (node === "info") b += (coach.info || 0) + (coach.discipline || 0) * 0.35 + (team.tactics - 50) * 0.08;
+  if (node === "duel") b += (coach.antiStar || 0) - (opponent.style === "明星单核队" ? 4 : 0);
+  if (node === "morale") b += (coach.calm || 0) + (team.morale - 50) * 0.12;
+  if (node === "clutch") b += (team.chemistry - 50) * 0.1 + (team.morale - 50) * 0.1;
+  if (node === "timeout") b += (coach.discipline || 0) + (coach.calm || 0) * 0.4;
+  if (coach.speed && opponent.style !== "激进队") b += node === "info" ? -2 : coach.speed * 0.45;
+  return b;
+}
 
-  const opening = `本周对手：${opponent}，地图：${map}。赛前事件是「${event.title}」，所以这场比赛从 BP 阶段就带着一点火药味。`;
-  store.getState().appendMatchLine({ tone: "event", text: opening });
+function winProbability(state, node) {
+  const m = state.currentMatch;
+  const phaseBias = getCurrentPhase(m)?.bias || 0;
+  const base = 50 + (teamPower(state) - m.opponent.power) * 0.72;
+  const economy = (m.economyUs - m.economyThem) * 0.12;
+  const pressure = Math.max(m.us, m.them) >= 10 ? (state.team.morale - 50) * 0.16 + avg(state.players, ["clutch"]) * 0.04 - 3 : 0;
+  const trade = node === "duel" || node === "clutch" ? (state.team.chemistry - 50) * 0.08 : 0;
+  const tactics = tacticBonus(node, m.coach, m.opponent, state.team);
+  return clamp(base + economy + phaseBias + tactics + pressure + trade - m.adjustCount * 2.4, 8, 92);
+}
 
-  let us = 0;
-  let them = 0;
-  const snapshots = 12;
-  for (let i = 1; i <= snapshots; i++) {
-    await sleep(520);
-    const latest = store.getState();
-    const power = teamPower(latest) + (Math.random() * 24 - 12);
-    const wonSegment = power > 57 + Math.random() * 16;
-    const swing = Math.random() < 0.18 ? 2 : 1;
-    if (wonSegment) us += swing;
-    else them += swing;
-    store.getState().updateScore(us, them);
+function shouldAskDecision(m) {
+  if (m.usedDecisionRounds.includes(m.round)) return false;
+  const profileRounds = scriptProfiles[m.script]?.decisionRounds || [];
+  return profileRounds.includes(m.round) || (m.them - m.us >= 3 && m.round > 3) || Math.max(m.us, m.them) === 11;
+}
 
-    const player = pick(latest.players);
-    const line = buildRoundLine(i, player, wonSegment);
-    store.getState().appendMatchLine({ tone: wonSegment ? "good" : "bad", text: line });
+function makeDecisionPrompt(m) {
+  if (m.them - m.us >= 3) return `连续丢分。${getOpponentTell(m)}你要安抚、变速，还是把比赛交给明星？`;
+  if (m.adjustCount >= 2) return `对手已经读到你的习惯。${getOpponentTell(m)}继续默认会被吃，换一个高风险 call。`;
+  if (Math.max(m.us, m.them) >= 11) return "赛点边缘。每一个赌点都可能变成封面，也可能变成会议材料。";
+  return `局势节点到了。${tacticalRead(m)}`;
+}
 
-    if (i === 5 || i === 9) {
-      const decision = decisions[i === 5 ? 0 : 1];
-      const choice = await askDecision(decision);
-      applyEffectBundle(choice);
-      store.getState().appendMatchLine({ tone: "event", text: `教练决策：${choice.text}` });
-      await sleep(350);
-    }
+function dynamicInterventions(m) {
+  const pool = [...baseInterventions];
+  if (m.them - m.us >= 3) {
+    pool.unshift(
+      { label: "暂停训话，先止血", style: { calm: 9, discipline: 4 }, effect: { morale: 6, chemistry: 2 }, risk: "如果下一回合输，红温概率增加。", backfire: { morale: -4 }, text: "你把耳机放下，只讲下一分怎么拿。呼吸慢了下来。" },
+      { label: "让明星自由发挥", style: { speed: 4, gamble: 7 }, effect: { morale: 3, chemistry: -3 }, risk: "失败会伤害团队默契。", backfire: { chemistry: -5 }, text: "战术板合上：这一回合，谁敢开枪谁说了算。" },
+    );
   }
-
-  if (us === them) {
-    const overtimeRare = Math.random() < 0.08;
-    if (overtimeRare) {
-      store.getState().appendMatchLine({ tone: "event", text: "比分被拖进加时。全队看起来像刚被 Windows 更新强制重启。" });
-      await sleep(520);
-      const wonOT = teamPower(store.getState()) + Math.random() * 15 > 62;
-      if (wonOT) us += 2;
-      else them += 2;
-    } else {
-      if (teamPower(store.getState()) > 58) us += 1;
-      else them += 1;
-    }
+  if (m.adjustCount >= 2) {
+    pool.unshift({ label: "假转点骗调整", style: { info: 10, discipline: 3 }, effect: { tactics: 3 }, risk: "如果被反读，战术执行 -5。", backfire: { tactics: -5 }, text: "对手开始针对你的转点，你给他们一个假答案。" });
   }
-
-  const won = us > them;
-  store.getState().updateScore(us, them);
-  const result = won ? `第 ${state.week} 周胜利 ${us}:${them}` : `第 ${state.week} 周失利 ${us}:${them}`;
-  const moment = won
-    ? pick([`donk 红温但杀完了，${us}:${them}`, `暂停救了整场，${us}:${them}`, `m0NESY 把残局打成短视频，${us}:${them}`])
-    : pick([`战术泄露后的第一场，${us}:${them}`, `语音爆炸，比分也爆炸，${us}:${them}`, `粉丝还在，比分没了，${us}:${them}`]);
-  store.getState().addMoment(moment);
-  store.getState().addLog(won ? "比赛胜利" : "比赛失利", `${result}。本场名场面：${moment}`);
-  store.getState().applyTeamEffect(won ? { money: 4, morale: 7, fame: 5, fans: 5, chemistry: 3 } : { morale: -7, fame: 2, fans: -4, chemistry: -3 });
-  store.getState().applyFatigueAll(6);
-  await sleep(500);
-  store.getState().finishWeek(won, result);
+  if (m.economyUs < 35) {
+    pool.unshift({ label: "半甲 Tec-9 提速", style: { speed: 8, economy: -2 }, effect: { morale: 2 }, risk: "输掉后经济继续崩，士气 -4。", backfire: { morale: -4 }, text: "经济已经烂了，那就把节奏也打烂。" });
+  }
+  return shuffle(pool).slice(0, 3);
 }
 
-function buildRoundLine(index, player, won) {
-  const phase = ["开局", "控图", "第一波接触", "经济局", "暂停后", "半场前", "换边", "对手变阵", "队内分歧", "压力局", "赛点前", "终局"][index - 1];
-  const base = pick([pick(killLines), pick(tacticLines), pick(mentalLines)]).replace("{p}", player.name);
-  const tail = won
-    ? pick(["这一段你们拿下了，比分板终于肯讲点人情。", "队伍语音短暂变亮，像有人打开了窗。", "弹幕开始刷：教练刚才是不是会点东西？"])
-    : pick(["这一段丢了，摄像头切到教练席时你刚好没表情。", "语音里没人吵，但这种安静通常更危险。", "对手没有打得多神，只是你们犯错很准时。"]);
-  return `第 ${index} 镜头｜${phase}：${base} ${tail}`;
+function applyDecisionState(s, option) {
+  const timeoutCost = s.pendingDecision?.timeoutCost ? 1 : 0;
+  const pending = option.backfire ? [{ condition: "nextRoundLoss", effect: option.backfire, label: option.risk }] : [];
+  return {
+    pendingDecision: null,
+    team: applyTeamEffect(s.team, option.effect || {}),
+    currentMatch: {
+      ...s.currentMatch,
+      coach: mergeStyle(s.currentMatch.coach, option.style),
+      timeouts: s.currentMatch.timeouts - timeoutCost,
+      pendingConsequences: [...s.currentMatch.pendingConsequences, ...pending],
+      usedDecisionRounds: [...s.currentMatch.usedDecisionRounds, s.currentMatch.round],
+      lines: [...s.currentMatch.lines, { tone: "event", text: `教练干预：${renderDecisionText(option.text, s)}` }],
+    },
+  };
 }
 
-function askDecision(decision) {
-  return new Promise((resolve) => {
-    $("decisionBox").classList.remove("hidden");
-    $("decisionText").textContent = decision.prompt;
-    $("decisionOptions").innerHTML = decision.options
-      .map((option, index) => `<button class="decision-option" type="button" data-decision="${index}">${option.label}</button>`)
-      .join("");
-    document.querySelectorAll("[data-decision]").forEach((button) => {
-      button.addEventListener("click", () => {
-        $("decisionBox").classList.add("hidden");
-        resolve(decision.options[Number(button.dataset.decision)]);
-      });
-    });
+function activePause() {
+  const s = store.getState();
+  const m = s.currentMatch;
+  if (s.phase !== "match" || s.pendingDecision || !m || m.timeouts <= 0) return;
+  store.getState().setDecision({
+    prompt: `主动暂停。你还剩 ${m.timeouts} 次暂停。${tacticalRead(m)}`,
+    options: dynamicInterventions(m),
+    timeoutCost: true,
   });
+}
+
+function readGame() {
+  const s = store.getState();
+  const m = s.currentMatch;
+  if (s.phase !== "match" || !m || s.pendingDecision) return;
+  store.getState().appendLine({ tone: "event", text: `读盘：${tacticalRead(m)} ${getOpponentTell(m)}` });
+}
+
+function renderDecisionText(text, state) {
+  const hot = [...state.players].sort((a, b) => b.tilt + b.fatigue - (a.tilt + a.fatigue))[0]?.name || "核心选手";
+  return text.replaceAll("{hot}", hot);
+}
+
+function tacticalRead(m) {
+  const recent = m.opponentState.recent.slice(-3).join("、") || "还没有足够样本";
+  const eco = m.economyThem > 58 ? "对手下回合大概率长枪全甲。" : m.economyThem < 34 ? "对手可能强起或半甲提速。" : "对手经济还能打一套完整默认。";
+  const adapt = `对手适应进度 ${Math.min(100, Math.round((m.opponentState.roundsSinceAdapt / m.opponent.adaptSpeed) * 100))}%。`;
+  return `近三回合：${recent}。${eco} ${adapt}`;
+}
+
+function getOpponentTell(m) {
+  if (m.opponentState.roundsSinceAdapt + 1 >= m.opponent.adaptSpeed) return `预警：${pick(m.opponent.tells)}。`;
+  return `观察：${pick(m.opponent.patterns)}还在重复。`;
+}
+
+function playNextRound() {
+  const state = store.getState();
+  const m = state.currentMatch;
+  if (!m || state.pendingDecision || state.phase !== "match") return;
+  if (shouldAskDecision(m)) {
+    store.getState().setDecision({ prompt: makeDecisionPrompt(m), options: dynamicInterventions(m) });
+    return;
+  }
+  const node = nodeForRound(m);
+  const prob = winProbability(state, node);
+  const won = Math.random() * 100 < prob;
+  const us = m.us + (won ? 1 : 0);
+  const them = m.them + (won ? 0 : 1);
+  const round = m.round + 1;
+  const economyUs = clamp(m.economyUs + (won ? 12 : -14) + (node === "eco" ? 8 : 0));
+  const economyThem = clamp(m.economyThem + (won ? -12 : 12));
+  const adjustTriggered = !won && ["info", "gamble", "duel"].includes(node);
+  const adjustCount = m.adjustCount + (adjustTriggered ? 1 : 0);
+  const opponentState = updateOpponentState(m, node, adjustTriggered);
+  const playerState = updatePlayerState(state, won, node, economyUs);
+  const consequence = resolveConsequences(m.pendingConsequences, won);
+  const nextTeam = consequence.effect ? applyTeamEffect(state.team, consequence.effect) : state.team;
+  store.getState().appendLine(makeRoundLine({ ...state, team: nextTeam }, { node, prob, won, us, them, round, adjustCount, consequence }));
+  store.getState().updateMatch({ round, us, them, economyUs, economyThem, adjustCount, opponentState, playerState, pendingConsequences: consequence.remaining });
+  if (consequence.effect) store.getState().updateTeam(nextTeam);
+  if (us >= WIN_SCORE || them >= WIN_SCORE) finishRoundMatch(us, them);
+}
+
+function resolveConsequences(pending, won) {
+  const hit = pending.filter((c) => c.condition === "nextRoundLoss" && !won);
+  const remaining = pending.filter((c) => !(c.condition === "nextRoundLoss"));
+  const effect = hit.length ? hit.reduce((acc, c) => {
+    Object.entries(c.effect).forEach(([k, v]) => (acc[k] = (acc[k] || 0) + v));
+    return acc;
+  }, {}) : null;
+  return { effect, remaining, text: hit.length ? `上回合的赌注开始反噬：${hit.map((c) => c.label).join(" ")}` : "" };
+}
+
+function updateOpponentState(m, node, adjusted) {
+  const pattern = pick(m.opponent.patterns);
+  const roundsSinceAdapt = adjusted ? 0 : m.opponentState.roundsSinceAdapt + 1;
+  return {
+    pattern: (m.opponentState.pattern + 1) % m.opponent.patterns.length,
+    adaptedTo: adjusted ? [...m.opponentState.adaptedTo, node].slice(-4) : m.opponentState.adaptedTo,
+    roundsSinceAdapt,
+    recent: [...m.opponentState.recent, pattern].slice(-5),
+  };
+}
+
+function updatePlayerState(state, won, node, economy) {
+  const m = state.currentMatch;
+  const next = resetRoundPlayerState(m.playerState, economy);
+  const hero = pickWeighted(state.players, won);
+  return next.map((p) => {
+    const isHero = p.name === hero.name;
+    const damage = won ? (isHero ? Math.random() * 48 : Math.random() * 88) : (isHero ? Math.random() * 70 : 35 + Math.random() * 90);
+    const alive = won ? damage < 94 : damage < 55 && Math.random() > 0.35;
+    return {
+      ...p,
+      hp: alive ? clamp(100 - damage, 1, 100) : 0,
+      alive,
+      kills: p.kills + (isHero && won ? pick([2, 2, 3]) : won && Math.random() > 0.68 ? 1 : 0),
+      deaths: p.deaths + (alive ? 0 : 1),
+      armor: p.armor && damage < 70,
+      helmet: p.helmet && damage < 55,
+    };
+  });
+}
+
+function finishRoundMatch(us, them) {
+  const fresh = { ...store.getState(), currentMatch: { ...store.getState().currentMatch, us, them } };
+  const wonMatch = us > them;
+  const moment = makeMoment(fresh, wonMatch);
+  store.getState().addLog(wonMatch ? "比赛胜利" : "比赛失利", `${us}:${them}。${moment}`);
+  store.getState().finishMatch(wonMatch, makeOpinion(fresh, wonMatch), moment);
+}
+
+function pickWeighted(players, won) {
+  const total = players.reduce((sum, p) => sum + (won ? p.aim + p.clutch + p.teamwork * 0.4 : p.tilt + p.fatigue + 30), 0);
+  let roll = Math.random() * total;
+  for (const p of players) {
+    roll -= won ? p.aim + p.clutch + p.teamwork * 0.4 : p.tilt + p.fatigue + 30;
+    if (roll <= 0) return p;
+  }
+  return players[0];
+}
+
+function makeRoundLine(state, ctx) {
+  const [title, detail] = nodes[ctx.node];
+  const p = pickWeighted(state.players, ctx.won);
+  const action = ctx.won ? winAction(p, ctx.node, state.currentMatch.opponent.star) : loseAction(p, state.currentMatch.opponent.star, ctx.node);
+  const intel = intelLine(state.currentMatch, ctx.node, ctx.won);
+  const cast = castLine(ctx, p);
+  const adjust = ctx.adjustCount >= 2 && !ctx.won ? "<br><b>预警：</b>对手已经开始根据你的转点节奏提前站位。" : "";
+  const consequence = ctx.consequence.text ? `<br><b>${ctx.consequence.text}</b>` : "";
+  return { tone: ctx.won ? "good" : "bad", text: `<small>R${ctx.round} / ${ctx.us}:${ctx.them} / ${title} / 参考胜率 ${ctx.prob.toFixed(0)}%</small>${detail}<br>${action}<br>${intel}${adjust}${consequence}<br><span class="caster">${cast}</span>` };
+}
+
+function winAction(p, node, star) {
+  const map = {
+    eco: [`${p.name} 捡枪双杀。对手经济也崩了，下回合可能强起。`, `${p.name} 用 Tec-9 把包点撕开。${star} 没保住枪。`],
+    clutch: [`${p.name} 没急。等对手转身才开枪。`, `${p.name} 这次残局拿下了，前两次失误终于被洗掉。`],
+    timeout: [`暂停后队伍变了。${p.name} 第一枪打开默认。`, `战术刚讲完就兑现。${p.name} 把对手的提前站位打穿。`],
+    morale: [`${p.name} 把不该赢的回合拖回来。语音里第一次有人笑。`, `${p.name} 抬了一手士气，连败的声音停住了。`],
+    gamble: [`赌点生效。${p.name} 蹲在非常规位，像蹲到了对手剧本。`, `${p.name} 从烟后钻出来。对手搜点路线被你猜中。`],
+    info: [`三架位打成了。${p.name} 没看到人，但看到了意图。`, `假打被读到了。${p.name} 提前转点补上最后一枪。`],
+    duel: [`${p.name} 对上 ${star} 没退。第一枪准得像提前知道镜头会切。`, `${p.name} 赢下明星对位。这个回合会进集锦。`],
+  };
+  return pick(map[node]);
+}
+
+function loseAction(p, star, node) {
+  const map = {
+    eco: [`${p.name} 强起没有声音。钱没了，回合也没了。`, `经济局没翻。对手保下三把长枪。`],
+    clutch: [`${p.name} 最后一枪空了。${star} 没给第二次机会。`, `${p.name} 读对了位置，但没稳住手。`],
+    timeout: [`暂停刚结束就白给。战术板还热着，比分已经凉了。`, `对手像听见了暂停内容，第一波就反架成功。`],
+    morale: [`${p.name} 没补上那枪，语音突然安静。`, `连败开始咬人。有人还在讲上一回合。`],
+    gamble: [`赌点赌错了。另一侧像开了门，对手排队进包点。`, `非常规位被预瞄。对手已经在读你的风险偏好。`],
+    info: [`假脚步骗到了你们，真正的进攻已经进点。`, `信息断了。补防到的时候包已经埋下。`],
+    duel: [`${star} 开始收割。你的针对像写在纸上的勇敢。`, `${p.name} 第一枪没顶住，对面明星把局势接走。`],
+  };
+  return pick(map[node]);
+}
+
+function intelLine(m, node, won) {
+  const eco = m.economyThem > 58 ? "对手下回合大概率全甲长枪。" : m.economyThem < 34 ? "对手经济低，可能强起或提速。" : "对手经济还能打一套完整默认。";
+  const pattern = pick(m.opponent.patterns);
+  const read = won ? `你们刚抓到「${pattern}」。` : `对手用「${pattern}」骗过了第一波判断。`;
+  const nodeHint = node === "info" ? "他们开始测试你的补防速度。" : node === "eco" ? "经济会决定下回合节奏。" : "下一回合第一身位很关键。";
+  return `<b>情报：</b>${eco} ${read}${nodeHint}`;
+}
+
+function castLine(ctx, p) {
+  if (ctx.won && ctx.prob < 35) return "这分太硬。";
+  if (!ctx.won && ctx.prob > 68) return "这都能丢。";
+  if (ctx.node === "clutch") return "心跳局。";
+  return ctx.won ? pick([`${p.name} 有东西。`, "暂停有味道。", "读到了。", "这分提气。"]) : pick(["被反读了。", "还没崩。", "要复盘。", "节奏断了。"]);
+}
+
+function makeOpinion(state, won) {
+  const m = state.currentMatch;
+  const headline = won ? pick(["这暂停值一个 Major 冠军。", "教练今天真有东西。", "这队终于像一支队了。"]) : pick(["暂停叫了，但没叫到点上。", "这场输在中期读盘。", "明星没救回结构问题。"]);
+  const ratings = state.players.map((p) => ({ name: p.name, score: clamp((won ? 7.2 : 5.4) + (p.clutch - 70) / 20 + Math.random() * 1.8, 1, 10).toFixed(1) }));
+  return { headline, body: `${m.opponent.name} / ${m.map}，最终 ${m.us}:${m.them}。争议点：对方调整为什么来得这么快，以及你的暂停到底救了哪几个回合。`, ratings };
+}
+
+function makeMoment(state, won) {
+  const m = state.currentMatch;
+  if (m.script === "宿命局") return won ? "宿命局：最后一张图，你用暂停拆掉了对手默认。" : "宿命局：离 13 分只差一口气，最后没人敢呼吸。";
+  if (won && m.them >= 11) return "绝杀：低胜率回合被你赌成了封面。";
+  if (!won && m.us >= 11) return "崩盘：离胜利只差一分，语音却先碎了。";
+  return won ? "翻盘：暂停真的改了走向。" : "被拆解：纸面优势被一回合一回合拿走。";
 }
 
 function render() {
-  const state = store.getState();
-  $("seasonLine").textContent = `第 ${state.week} 周 / ${SEASON_WEEKS} 周`;
-  $("recordLine").textContent = `${state.wins}W-${state.losses}L`;
-  $("lastResult").textContent = state.lastResult;
-  $("saveStatus").textContent = `已自动存档 · ${new Date().toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" })}`;
-  $("weekTitle").textContent = state.seasonEnded ? "赛季结束" : state.busy ? "本周正在推进" : "选择本周行动";
-
-  renderTeamStats(state);
-  renderRoster(state);
-  renderActions(state);
-  renderLog(state);
-  renderMatch(state);
-  renderSeasonEnd(state);
+  const s = store.getState();
+  $("setupView").classList.toggle("hidden", s.phase !== "setup");
+  $("gameView").classList.toggle("hidden", s.phase === "setup");
+  $("gameView").classList.toggle("match-focus", s.phase === "match");
+  $("saveStatus").textContent = `已自动存档 / ${new Date().toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" })}`;
+  renderSetup(s);
+  if (s.phase !== "setup") {
+    renderTeam(s);
+    renderActions(s);
+    renderDecision(s);
+    renderMatch(s);
+    renderOpinion(s);
+    renderEnd(s);
+    renderLog(s);
+  }
 }
 
-function renderTeamStats(state) {
-  $("teamStats").innerHTML = teamStatDefs
-    .map(([label, key, prefix]) => {
-      const value = state.team[key];
-      const width = key === "money" ? Math.min(100, value) : value;
-      return `
-        <div class="stat-row">
-          <div class="stat-top"><span>${label}</span><b>${prefix}${value}</b></div>
-          <div class="bar"><span style="width:${width}%"></span></div>
-        </div>
-      `;
-    })
-    .join("");
+function renderSetup(s) {
+  const selectedPlayers = s.pickedIds.map((id) => marketPlayers.find((p) => p.name === id));
+  const gate = canStartRoster(selectedPlayers);
+  $("budgetText").textContent = `预算 $${s.budget}`;
+  $("pickedText").textContent = `已选 ${s.pickedIds.length} / 5`;
+  $("rosterGate").textContent = gate.reason;
+  $("rosterGate").className = gate.ok ? "gate ok" : "gate";
+  $("startSeasonBtn").disabled = !gate.ok;
+  $("market").innerHTML = marketPlayers.map((p) => {
+    const selected = s.pickedIds.includes(p.name);
+    const disabled = !selected && (s.pickedIds.length >= 5 || s.budget < p.price);
+    return `<button class="player-card ${selected ? "selected" : ""}" ${disabled ? "disabled" : ""} data-pick="${p.name}" type="button">
+      <div class="portrait"><img src="${p.photo}" alt="${p.name}" loading="lazy" onerror="this.classList.add('broken')" /><span>${p.name.slice(0, 2)}</span></div>
+      <div class="player-card-body">
+        <h3><span>${p.name}</span><span>$${p.price}</span></h3>
+        <p>${p.role} / ${p.tag} / ${p.voice}</p>
+        <div class="mini"><span>rating ${p.rating}</span><span>HLTV profile</span>${playerStatDefs.map(([l, k]) => `<span>${l}${p[k]}</span>`).join("")}</div>
+      </div>
+    </button>`;
+  }).join("");
+  document.querySelectorAll("[data-pick]").forEach((btn) => btn.addEventListener("click", () => store.getState().togglePick(btn.dataset.pick)));
 }
 
-function renderRoster(state) {
-  $("roster").innerHTML = state.players
-    .map(
-      (player) => `
-        <div class="player">
-          <strong><span>${player.name}</span><span>${player.role}</span></strong>
-          <p>${player.trait}</p>
-          <div class="mini">
-            ${playerStatDefs.map(([label, key]) => `<span>${label}${player[key]}</span>`).join("")}
-          </div>
-        </div>
-      `
-    )
-    .join("");
+function renderTeam(s) {
+  $("seasonLine").textContent = `第 ${s.week} 周 / ${SEASON_WEEKS} 周`;
+  $("recordLine").textContent = `${s.wins}W-${s.losses}L`;
+  $("lastResult").textContent = s.lastResult;
+  $("weekTitle").textContent = s.phase === "match" ? "实时赛事 Feed" : s.phase === "post" ? "赛后舆论" : s.phase === "ended" ? "赛季结束" : "选择本周行动";
+  $("phaseLabel").textContent = s.phase === "match" ? "LIVE MAJOR FEED" : "TEAM ROOM";
+  $("teamStats").innerHTML = teamStatDefs.map(([label, key]) => `<div class="stat-row" title="${statTooltips[key]}"><div class="stat-top"><span>${label}</span><b>${s.team[key]}</b></div><div class="bar"><span style="width:${s.team[key]}%"></span></div></div>`).join("");
+  $("roster").innerHTML = s.phase === "match" && s.currentMatch ? renderSpectatorRoster(s.currentMatch.playerState) : s.players.map((p) => `<div class="player"><strong><span>${p.name}</span><span>${p.role}</span></strong><p>${p.tag} / ${p.voice}</p><div class="mini">${playerStatDefs.map(([l, k]) => `<span>${l}${p[k]}</span>`).join("")}</div></div>`).join("");
 }
 
-function renderActions(state) {
-  $("actions").innerHTML = actions
-    .map(
-      (action) => `
-        <button class="action-card" type="button" data-action="${action.id}" ${state.busy || state.seasonEnded ? "disabled" : ""}>
-          <h3>${action.title}</h3>
-          <p>${action.text}</p>
-          <span class="tag">疲劳 ${action.fatigue > 0 ? "+" : ""}${action.fatigue}</span>
-        </button>
-      `
-    )
-    .join("");
-
-  document.querySelectorAll("[data-action]").forEach((button) => {
-    button.addEventListener("click", () => runWeek(button.dataset.action));
-  });
+function renderSpectatorRoster(players) {
+  return players.map((p, i) => `<div class="spectator ${p.side.toLowerCase()} ${p.alive ? "" : "dead"}">
+    <span class="num">${i + 1}</span>
+    <strong><span>${p.side}</span> ${p.name}</strong>
+    <span class="hp">HP ${p.hp}</span>
+    <span>${p.weapon}</span>
+    <span>${p.kills}/${p.deaths}</span>
+    <span>${p.armor ? "甲" : "无甲"} ${p.helmet ? "头" : "无头"}</span>
+  </div>`).join("");
 }
 
-function renderLog(state) {
-  $("log").innerHTML = state.logs
-    .map(
-      (item) => `
-        <article class="log-item">
-          <strong>W${item.week} · ${item.title}</strong>
-          <p>${item.text}</p>
-        </article>
-      `
-    )
-    .join("");
+function renderActions(s) {
+  $("actions").classList.toggle("hidden", s.phase !== "week");
+  $("actions").innerHTML = s.weeklyActions.map((a) => `<button class="action-card" data-action="${a.id}" type="button"><h3>${a.title}</h3><p>${a.text}</p><span class="tag">影响真实回合逻辑</span></button>`).join("");
+  document.querySelectorAll("[data-action]").forEach((btn) => btn.addEventListener("click", () => store.getState().startMatch(s.weeklyActions.find((a) => a.id === btn.dataset.action))));
 }
 
-function renderMatch(state) {
-  const match = state.currentMatch;
-  $("matchCard").classList.toggle("hidden", !match);
-  if (!match) return;
-  $("matchName").textContent = `${match.map} vs ${match.opponent}`;
-  $("matchScore").textContent = `${match.us} : ${match.them}`;
-  $("matchFeed").innerHTML = match.lines
-    .map((line) => `<div class="round-line ${line.tone === "bad" ? "bad" : line.tone === "event" ? "event" : ""}">${line.text}</div>`)
-    .join("");
+function renderDecision(s) {
+  $("decisionBox").classList.toggle("hidden", !s.pendingDecision);
+  if (!s.pendingDecision) return;
+  $("decisionText").textContent = s.pendingDecision.prompt;
+  $("decisionOptions").innerHTML = s.pendingDecision.options.map((o, i) => `<button class="decision-option" data-decision="${i}" type="button"><strong>${o.label}</strong><small>${o.risk || "没有免费答案。"}</small></button>`).join("");
+  document.querySelectorAll("[data-decision]").forEach((btn) => btn.addEventListener("click", () => store.getState().applyDecision(s.pendingDecision.options[Number(btn.dataset.decision)])));
+}
+
+function renderMatch(s) {
+  const m = s.currentMatch;
+  $("matchCard").classList.toggle("hidden", s.phase !== "match" || !m);
+  $("activePauseBtn").disabled = s.phase !== "match" || !m || !!s.pendingDecision || m.timeouts <= 0;
+  $("readGameBtn").disabled = s.phase !== "match" || !m || !!s.pendingDecision;
+  $("activePauseBtn").textContent = m ? `暂停 x${m.timeouts}` : "暂停 x3";
+  if (!m) return;
+  $("matchMap").textContent = m.map;
+  $("matchOpponent").textContent = m.opponent.name;
+  $("matchScore").textContent = `${m.us} : ${m.them}`;
+  $("matchMeta").innerHTML = [`剧本 ${m.script}`, `对手 ${m.opponent.style}`, `我方经济 ${m.economyUs}`, `对方经济 ${m.economyThem}`, `调整 ${m.adjustCount}`].map((x) => `<span class="tag">${x}</span>`).join("");
+  $("matchFeed").innerHTML = m.lines.slice(-8).map((line) => `<div class="round-line ${line.tone === "bad" ? "bad" : line.tone === "event" ? "event" : ""}">${line.text}</div>`).join("");
   $("matchFeed").scrollTop = $("matchFeed").scrollHeight;
+  $("nextRoundBtn").textContent = `R${m.round + 1} / 继续`;
 }
 
-function renderSeasonEnd(state) {
-  $("seasonEnd").classList.toggle("hidden", !state.seasonEnded);
-  if (!state.seasonEnded) return;
-  const rating = state.wins >= 15 ? "传奇教练" : state.wins >= 11 ? "季后赛级项目" : state.wins >= 7 ? "有节目效果的中游队" : "流量很高的灾难片";
-  $("endingTitle").textContent = rating;
-  $("endingBody").textContent = `20 周结束，战绩 ${state.wins}W-${state.losses}L。你的队伍证明了一件事：电竞管理不是让所有人冷静，而是在有人快爆炸时，判断他还能不能杀两个。`;
-  $("records").innerHTML = [
-    ["最终战绩", `${state.wins}W-${state.losses}L`],
-    ["最长连胜", `${state.bestStreak}`],
-    ["donk 红温次数", `${state.tiltCount}`],
-    ["最终名气", `${state.team.fame}`],
-    ["粉丝支持", `${state.team.fans}`],
-    ["赛季名场面", state.famousMoments[0] || "暂无"],
-  ]
-    .map(([label, value]) => `<div class="record"><span>${label}</span><strong>${value}</strong></div>`)
-    .join("");
+function renderOpinion(s) {
+  $("opinionBox").classList.toggle("hidden", s.phase !== "post");
+  if (!s.lastOpinion) return;
+  $("forumCard").innerHTML = `<h3>HLTV 热帖 / ${s.lastOpinion.headline}</h3><p>${s.lastOpinion.body}</p><div class="rating-grid">${s.lastOpinion.ratings.map((r) => `<div class="rating"><span>${r.name}</span><strong>${r.score}</strong></div>`).join("")}</div>`;
 }
 
-$("newSeasonBtn").addEventListener("click", () => {
-  if (confirm("确定开启新赛季？当前存档会被覆盖。")) store.getState().startNewSeason();
-});
-$("restartBtn").addEventListener("click", () => store.getState().startNewSeason());
-$("clearLogBtn").addEventListener("click", () => store.getState().clearLog());
+function renderEnd(s) {
+  $("seasonEnd").classList.toggle("hidden", s.phase !== "ended");
+  if (s.phase !== "ended") return;
+  $("endingTitle").textContent = s.wins >= 4 ? "那个被记住的赛季" : s.wins >= 2 ? "有名场面的危险项目" : "流量很高的事故现场";
+  $("endingBody").textContent = `5 周结束，战绩 ${s.wins}W-${s.losses}L。这个赛季留下的镜头：${s.bestMoment}`;
+  $("records").innerHTML = [["最终战绩", `${s.wins}W-${s.losses}L`], ["赛季记忆", s.bestMoment], ["士气", s.team.morale], ["战术执行", s.team.tactics], ["团队默契", s.team.chemistry]].map(([a, b]) => `<div class="record"><span>${a}</span><strong>${b}</strong></div>`).join("");
+}
+
+function renderLog(s) {
+  $("log").innerHTML = s.logs.map((l) => `<article class="log-item"><strong>W${l.week} / ${l.title}</strong><p>${l.text}</p></article>`).join("");
+}
+
+$("startSeasonBtn").addEventListener("click", () => store.getState().startSeason());
+$("newSeasonBtn").addEventListener("click", () => { if (confirm("确定变阵重组？当前存档会被覆盖。")) store.getState().newSeason(); });
+$("restartBtn").addEventListener("click", () => store.getState().newSeason());
+$("continueBtn").addEventListener("click", () => store.getState().continueSeason());
+$("activePauseBtn").addEventListener("click", activePause);
+$("readGameBtn").addEventListener("click", readGame);
+$("nextRoundBtn").addEventListener("click", playNextRound);
+$("nextWeekBtn").addEventListener("click", () => store.getState().nextWeek());
 
 render();

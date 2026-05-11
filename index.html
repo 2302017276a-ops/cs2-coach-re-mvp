@@ -3,38 +3,53 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Donk 又红温了？｜电竞战队模拟器</title>
+    <title>CS2 Timeout / Major 局势模拟器</title>
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
     <main class="app">
       <header class="header">
         <div>
-          <p class="kicker">CS2 TEXT MANAGER · 20 WEEK SEASON</p>
-          <h1>Donk 又红温了？</h1>
+          <p class="kicker">CS2 EMOTION SIM / FIRST TO 13 / 5 WEEKS</p>
+          <h1>Major Timeout</h1>
         </div>
         <div class="save-pill" id="saveStatus">LocalStorage 自动存档</div>
       </header>
 
-      <section class="grid">
+      <section class="setup" id="setupView">
+        <div class="setup-copy">
+          <p class="kicker">BUILD A REAL FIVE</p>
+          <h2>强队不是 1 神带 4 坑，而是一套能被暂停救回来的结构。</h2>
+          <p>超巨价格有边际税。阵容必须满足最低平均 rating 和角色平衡，避免单核赌命成为唯一正确答案。</p>
+          <div class="budget-line">
+            <span id="budgetText">预算 $128</span>
+            <span id="pickedText">已选 0 / 5</span>
+          </div>
+          <div class="gate" id="rosterGate">需要选满 5 人</div>
+          <button id="startSeasonBtn" class="primary" type="button" disabled>开始赛季</button>
+        </div>
+        <div class="market" id="market"></div>
+      </section>
+
+      <section class="grid hidden" id="gameView">
         <aside class="panel side">
           <div class="panel-title">
-            <span>战队档案</span>
-            <button id="newSeasonBtn" class="text-btn" type="button">新赛季</button>
+            <span>队伍状态</span>
+            <button id="newSeasonBtn" class="text-btn" type="button">重开</button>
           </div>
 
           <div class="team-block">
             <div class="team-logo">DX</div>
             <div>
               <h2 id="teamName">Drama X</h2>
-              <p id="seasonLine">第 1 周 / 20 周</p>
+              <p id="seasonLine">第 1 周 / 5 周</p>
             </div>
           </div>
 
           <div class="stat-stack" id="teamStats"></div>
 
           <div class="panel-title small">
-            <span>首发名单</span>
+            <span>首发 / 观战 HUD</span>
             <span id="recordLine">0W-0L</span>
           </div>
           <div class="roster" id="roster"></div>
@@ -43,10 +58,10 @@
         <section class="panel main">
           <div class="terminal-head">
             <div>
-              <p class="kicker">每周循环</p>
+              <p class="kicker" id="phaseLabel">TEAM ROOM</p>
               <h2 id="weekTitle">选择本周行动</h2>
             </div>
-            <div class="scoreline" id="lastResult">等待赛季开始</div>
+            <div class="scoreline" id="lastResult">等待第一场比赛</div>
           </div>
 
           <div class="actions" id="actions"></div>
@@ -58,10 +73,22 @@
 
           <div class="match-card hidden" id="matchCard">
             <div class="match-top">
-              <span id="matchName">本周比赛</span>
-              <strong id="matchScore">0 : 0</strong>
+              <div class="match-title">
+                <strong id="matchMap">Ancient</strong>
+                <span>vs</span>
+                <strong id="matchOpponent">Vitality</strong>
+              </div>
+              <div class="match-score" id="matchScore">0 : 0</div>
             </div>
+            <div class="match-meta" id="matchMeta"></div>
             <div class="round-feed" id="matchFeed"></div>
+            <button id="nextRoundBtn" class="primary" type="button">R1 / 继续</button>
+          </div>
+
+          <div class="opinion hidden" id="opinionBox">
+            <p class="kicker">POST MATCH</p>
+            <div class="forum-card" id="forumCard"></div>
+            <button id="nextWeekBtn" class="primary" type="button">进入下一周</button>
           </div>
 
           <div class="season-end hidden" id="seasonEnd">
@@ -69,14 +96,16 @@
             <h2 id="endingTitle"></h2>
             <p id="endingBody"></p>
             <div class="records" id="records"></div>
-            <button id="restartBtn" class="primary" type="button">开启新赛季</button>
+            <button id="continueBtn" class="primary" type="button">继续磨合</button>
+            <button id="restartBtn" class="secondary-action" type="button">变阵重组</button>
           </div>
         </section>
 
         <aside class="panel log-panel">
-          <div class="panel-title">
-            <span>事件日志</span>
-            <button id="clearLogBtn" class="text-btn" type="button">清日志</button>
+          <div class="panel-title controls">
+            <span>教练席</span>
+            <button id="readGameBtn" class="text-btn" type="button">读盘</button>
+            <button id="activePauseBtn" class="text-btn" type="button">暂停 x3</button>
           </div>
           <div class="log" id="log"></div>
         </aside>
