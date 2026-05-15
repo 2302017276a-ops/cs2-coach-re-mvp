@@ -16,11 +16,48 @@ const WIN_SCORE = 13;
 const SEASON_WEEKS = 5;
 const START_BUDGET = 100;
 
+// MR12 cashflow (used to back economy bars/labels; gameplay structure stays the same).
+const MR12_KILL_REWARD = { rifle: 300, smg: 600, awp: 100, shotgun: 900 };
+const MR12_LOSS_BONUS = [0, 1400, 1900, 2400, 2900, 3400];
+
 const $ = (id) => document.getElementById(id);
 const clamp = (n, min = 0, max = 100) => Math.max(min, Math.min(max, Math.round(n)));
 const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
 const shuffle = (arr) => [...arr].sort(() => Math.random() - 0.5);
 const clone = (v) => JSON.parse(JSON.stringify(v));
+
+function mr12EconomyScore(money) {
+  return clamp((money / 16000) * 100);
+}
+
+function settleMr12Round({ winner, loser, winnerCause, loserLossStreak, winnerLossStreak }) {
+  const next = {
+    winnerMoney: winner.money,
+    loserMoney: loser.money,
+    winnerLossStreak: winnerLossStreak,
+    loserLossStreak: loserLossStreak,
+  };
+
+  // 1) streaks
+  next.loserLossStreak += 1;
+  next.winnerLossStreak = 0;
+
+  // 2) loser bonus
+  next.loserMoney += MR12_LOSS_BONUS[Math.min(next.loserLossStreak, 5)];
+
+  // 3) winner bonus
+  next.winnerMoney += winnerCause === "bomb" ? 3500 : 3250;
+
+  // 4) kill rewards (simple proxy: winner secures 3 kills each round)
+  const weapons = ["rifle", "smg", "awp"];
+  for (const w of weapons) next.winnerMoney += MR12_KILL_REWARD[w];
+
+  // 5) caps
+  next.winnerMoney = Math.min(next.winnerMoney, 16000);
+  next.loserMoney = Math.min(next.loserMoney, 16000);
+
+  return next;
+}
 
 const teamStatDefs = [["资金", "money", "¥"], ["士气", "morale", ""], ["名气", "fame", ""], ["战术熟练度", "tactics", ""], ["团队默契", "chemistry", ""], ["粉丝支持", "fans", ""]];
 const playerStatDefs = [["枪", "aim"], ["脑", "sense"], ["心", "mental"], ["团", "teamwork"], ["商", "market"], ["疲", "fatigue"]];
@@ -102,9 +139,9 @@ const baseInterventions = [
 
 const nodes = {
   eco: ["经济局", "经济像刚被老板审过，强起和保枪都很难看。"],
-  clutch: ["关键残局", "场上只剩两个人，语音里的重量像十个人。"],
+  clutch: ["关键残局", "场上只剩两个人，语音里只剩呼吸声。"],
   timeout: ["暂停窗口", "镜头切到教练席，所有人都在等你有没有东西。"],
-  morale: ["士气变化", "这一分会影响谁还愿意相信谁。"],
+  morale: ["心态回合", "这一分会影响谁还愿意相信谁。"],
   gamble: ["赌点", "地图另一侧空得能听见风声，赌对是天才，赌错是素材。"],
   info: ["信息误判", "对手给了一个假脚步，你们像真的听见了命运。"],
   duel: ["明星对位", "对面明星开始要球，这回合像单挑，也像审判。"],
@@ -259,8 +296,10 @@ function startMatchState(s, action) {
       round: 0,
       us: 0,
       them: 0,
-      economyUs: 50,
-      economyThem: 50,
+      economyUs: 800,
+      economyThem: 800,
+      lossStreakUs: 0,
+      lossStreakThem: 0,
       coach: { ...action.style },
       timeouts: 3,
       adjustCount: 0,
@@ -282,7 +321,7 @@ function teamPower(state) {
 function nodeForRound(m) {
   if (m.round === 0) return "timeout";
   if (Math.max(m.us, m.them) >= 11) return "clutch";
-  if (m.economyUs < 35 || m.economyThem < 35) return "eco";
+  if (m.economyUs < 3300 || m.economyThem < 3300) return "eco";
   if (Math.abs(m.us - m.them) >= 5) return m.us < m.them ? "morale" : "info";
   return pick(["duel", "gamble", "info", "eco", "morale"]);
 }
@@ -302,7 +341,7 @@ function tacticBonus(node, coach, opponent) {
 function winProbability(state, node) {
   const m = state.currentMatch;
   const base = 50 + (teamPower(state) - m.opponent.power) * 0.75;
-  const economy = (m.economyUs - m.economyThem) * 0.12;
+  const economy = ((m.economyUs - m.economyThem) / 1000) * 0.12;
   const pressure = Math.max(m.us, m.them) >= 10 ? (state.team.morale - 50) * 0.1 + avg(state.players, ["clutch"]) * 0.04 - 3 : 0;
   return clamp(base + economy + m.bias + tacticBonus(node, m.coach, m.opponent) + pressure - m.adjustCount * 2.2, 8, 92);
 }
@@ -330,7 +369,7 @@ function dynamicInterventions(m) {
   if (m.adjustCount >= 2) {
     pool.unshift({ label: "假转点骗调整", style: { info: 10, discipline: 3 }, effect: { tactics: 3 }, text: "对手开始针对你的转点，你给他们一个假答案。" });
   }
-  if (m.economyUs < 35) {
+  if (m.economyUs < 3300) {
     pool.unshift({ label: "半甲 Tec-9 提速", style: { speed: 8, economy: -2 }, effect: { money: -1, fame: 2 }, text: "经济已经烂了，那就把节奏也打烂。" });
   }
   return shuffle(pool).slice(0, 3);
@@ -366,11 +405,42 @@ function playNextRound() {
   const us = m.us + (won ? 1 : 0);
   const them = m.them + (won ? 0 : 1);
   const round = m.round + 1;
-  const economyUs = clamp(m.economyUs + (won ? 12 : -14) + (node === "eco" ? 8 : 0));
-  const economyThem = clamp(m.economyThem + (won ? -12 : 12));
+  let economyUs = m.economyUs;
+  let economyThem = m.economyThem;
+  let lossStreakUs = m.lossStreakUs || 0;
+  let lossStreakThem = m.lossStreakThem || 0;
+
+  const winnerCause = Math.random() < 0.28 ? "bomb" : "elim";
+  const settled = won
+    ? settleMr12Round({
+        winner: { money: economyUs },
+        loser: { money: economyThem },
+        winnerCause,
+        loserLossStreak: lossStreakThem,
+        winnerLossStreak: lossStreakUs,
+      })
+    : settleMr12Round({
+        winner: { money: economyThem },
+        loser: { money: economyUs },
+        winnerCause,
+        loserLossStreak: lossStreakUs,
+        winnerLossStreak: lossStreakThem,
+      });
+
+  if (won) {
+    economyUs = settled.winnerMoney;
+    economyThem = settled.loserMoney;
+    lossStreakUs = settled.winnerLossStreak;
+    lossStreakThem = settled.loserLossStreak;
+  } else {
+    economyUs = settled.loserMoney;
+    economyThem = settled.winnerMoney;
+    lossStreakUs = settled.loserLossStreak;
+    lossStreakThem = settled.winnerLossStreak;
+  }
   const adjustCount = m.adjustCount + (!won && ["info", "gamble", "duel"].includes(node) ? 1 : 0);
   store.getState().appendLine(makeRoundLine(state, { node, prob, won, us, them, round, adjustCount }));
-  store.getState().updateMatch({ round, us, them, economyUs, economyThem, adjustCount });
+  store.getState().updateMatch({ round, us, them, economyUs, economyThem, lossStreakUs, lossStreakThem, adjustCount });
   if (us >= WIN_SCORE || them >= WIN_SCORE) {
     const fresh = { ...store.getState(), currentMatch: { ...store.getState().currentMatch, us, them } };
     const wonMatch = us > them;
@@ -522,7 +592,13 @@ function renderMatch(s) {
   if (!m) return;
   $("matchName").textContent = `${m.map} vs ${m.opponent.name}`;
   $("matchScore").textContent = `${m.us} : ${m.them}`;
-  $("matchMeta").innerHTML = [`剧本 ${m.script}`, `对手风格 ${m.opponent.style}`, `我方经济 ${m.economyUs}`, `对方经济 ${m.economyThem}`, `对手调整 ${m.adjustCount} 次`].map((x) => `<span class="tag">${x}</span>`).join("");
+  $("matchMeta").innerHTML = [
+    `剧本 ${m.script}`,
+    `对手风格 ${m.opponent.style}`,
+    `我方经济 $${m.economyUs}`,
+    `对方经济 $${m.economyThem}`,
+    `对手调整 ${m.adjustCount} 次`,
+  ].map((x) => `<span class="tag">${x}</span>`).join("");
   $("matchFeed").innerHTML = m.lines.map((line) => `<div class="round-line ${line.tone === "bad" ? "bad" : line.tone === "event" ? "event" : ""}">${line.text}</div>`).join("");
   $("matchFeed").scrollTop = $("matchFeed").scrollHeight;
   $("nextRoundBtn").textContent = `第${m.round + 1}回合\n\n[继续]`;

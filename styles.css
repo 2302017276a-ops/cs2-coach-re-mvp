@@ -30,6 +30,7 @@ body {
     var(--bg);
   background-size: 32px 32px, 32px 32px, auto, auto, auto;
   font-family: "Cascadia Mono", Consolas, "Microsoft YaHei", monospace;
+  font-size: 14px;
 }
 
 button {
@@ -37,9 +38,9 @@ button {
 }
 
 .app {
-  width: min(1520px, calc(100% - 28px));
+  width: min(480px, calc(100% - 18px));
   margin: 0 auto;
-  padding: 22px 0;
+  padding: 14px 0;
 }
 
 .header,
@@ -96,8 +97,8 @@ h2 {
 .setup {
   min-height: calc(100vh - 132px);
   display: grid;
-  grid-template-columns: 0.86fr 1.24fr;
-  gap: 18px;
+  grid-template-columns: 1fr;
+  gap: 14px;
   align-items: start;
 }
 
@@ -175,12 +176,8 @@ h2 {
   line-height: 1.55;
 }
 
-.grid {
-  display: grid;
-  grid-template-columns: 310px minmax(0, 1fr) 370px;
-  gap: 16px;
-  height: calc(100vh - 132px);
-  min-height: 680px;
+.game {
+  display: block;
 }
 
 .panel {
@@ -418,6 +415,36 @@ h2 {
 .match-card {
   overflow: hidden;
   background: rgba(7, 11, 13, 0.68);
+  position: relative;
+}
+
+.kill-float {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: min(200px, calc(100% - 24px));
+  max-height: 44%;
+  padding: 12px;
+  z-index: 3;
+}
+
+.kill-float .log {
+  height: auto;
+  max-height: 260px;
+}
+
+.roster-panel > summary {
+  cursor: pointer;
+  user-select: none;
+  list-style: none;
+}
+
+.roster-panel > summary::-webkit-details-marker {
+  display: none;
+}
+
+.econ-bar {
+  margin-top: 14px;
 }
 
 .match-top {
@@ -541,16 +568,8 @@ h2 {
 .log {
   display: flex;
   flex-direction: column-reverse;
-  height: calc(100% - 42px);
   overflow: auto;
-}
-
-.side {
-  overflow: auto;
-}
-
-.main {
-  overflow: auto;
+  gap: 10px;
 }
 
 .secondary-action {
@@ -606,26 +625,12 @@ h2 {
 }
 
 @media (max-width: 1180px) {
-  .setup,
-  .grid {
-    grid-template-columns: 1fr;
-  }
-
   .setup-copy {
     position: static;
-  }
-
-  .log {
-    max-height: 420px;
   }
 }
 
 @media (max-width: 760px) {
-  .app {
-    width: min(100% - 18px, 1520px);
-    padding: 14px 0;
-  }
-
   .header,
   .terminal-head,
   .match-top {
@@ -639,5 +644,17 @@ h2 {
   .records,
   .rating-grid {
     grid-template-columns: 1fr;
+  }
+
+  .text-btn,
+  .primary,
+  .decision-option,
+  .secondary-action {
+    padding: 12px 14px;
+    min-height: 44px;
+  }
+
+  .kill-float {
+    width: 180px;
   }
 }

@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>2026 IEM 上海｜电竞局势模拟器</title>
+    <title>2026 IEM 上海–电竞局势模拟器</title>
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
@@ -13,7 +13,7 @@
           <p class="kicker">CS2 EMOTION SIM · FIRST TO 13 · 5 WEEKS</p>
           <h1>2026 IEM 上海</h1>
         </div>
-        <div class="save-pill" id="saveStatus">LocalStorage 自动存档</div>
+        <div class="save-pill" id="saveStatus">LocalStorage 自动存档。</div>
       </header>
 
       <section class="setup" id="setupView">
@@ -25,7 +25,7 @@
             选满 5 人后进入 5 周短赛季。
           </p>
           <div class="budget-line">
-            <span id="budgetText">预算 ¥100</span>
+            <span id="budgetText">预算 $100</span>
             <span id="pickedText">已选 0 / 5</span>
           </div>
           <button id="startSeasonBtn" class="primary" type="button" disabled>开始赛季</button>
@@ -33,47 +33,27 @@
         <div class="market" id="market"></div>
       </section>
 
-      <section class="grid hidden" id="gameView">
-        <aside class="panel side">
-          <div class="panel-title">
-            <span>战队档案</span>
-            <button id="newSeasonBtn" class="text-btn" type="button">重开</button>
-          </div>
-
-          <div class="team-block">
-            <div class="team-logo">DX</div>
-            <div>
-              <h2 id="teamName">Drama X</h2>
-              <p id="seasonLine">第 1 周 / 5 周</p>
-            </div>
-          </div>
-
-          <div class="stat-stack" id="teamStats"></div>
-
-          <div class="panel-title small">
-            <span>首发名单</span>
-            <span id="recordLine">0W-0L</span>
-          </div>
-          <div class="roster" id="roster"></div>
-        </aside>
-
+      <section class="game hidden" id="gameView">
         <section class="panel main">
           <div class="terminal-head">
             <div>
               <p class="kicker" id="phaseLabel">每周局势</p>
               <h2 id="weekTitle">选择本周行动</h2>
             </div>
-            <div class="scoreline" id="lastResult">等待第一场比赛</div>
+            <div class="save-pill scoreline" id="lastResult">等待第一场比赛</div>
           </div>
 
           <div class="actions" id="actions"></div>
 
-          <div class="decision hidden" id="decisionBox">
-            <p id="decisionText"></p>
-            <div id="decisionOptions"></div>
-          </div>
-
           <div class="match-card hidden" id="matchCard">
+            <aside class="kill-float panel" aria-label="killfeed">
+              <div class="panel-title">
+                <span>Killfeed</span>
+                <button id="activePauseBtn" class="text-btn" type="button">暂停 x3</button>
+              </div>
+              <div class="log" id="log"></div>
+            </aside>
+
             <div class="match-top">
               <span id="matchName">本周比赛</span>
               <strong id="matchScore">0 : 0</strong>
@@ -81,6 +61,39 @@
             <div class="match-meta" id="matchMeta"></div>
             <div class="round-feed" id="matchFeed"></div>
             <button id="nextRoundBtn" class="primary" type="button">点击进入下一回合</button>
+          </div>
+
+          <details class="panel roster-panel" id="rosterPanel">
+            <summary class="panel-title">
+              <span>队员面板</span>
+              <span id="recordLine">0W-0L</span>
+            </summary>
+
+            <div class="team-block">
+              <div class="team-logo">DX</div>
+              <div>
+                <h2 id="teamName">Drama X</h2>
+                <p id="seasonLine">第 1 周 / 5 周</p>
+              </div>
+              <button id="newSeasonBtn" class="text-btn" type="button">重开</button>
+            </div>
+
+            <div class="panel-title small">
+              <span>首发名单</span>
+            </div>
+            <div class="roster" id="roster"></div>
+          </details>
+
+          <section class="panel econ-bar" aria-label="economy">
+            <div class="panel-title">
+              <span>经济条</span>
+            </div>
+            <div class="stat-stack" id="teamStats"></div>
+          </section>
+
+          <div class="decision hidden" id="decisionBox">
+            <p id="decisionText"></p>
+            <div id="decisionOptions"></div>
           </div>
 
           <div class="opinion hidden" id="opinionBox">
@@ -98,17 +111,10 @@
             <button id="restartBtn" class="secondary-action" type="button">变阵重组</button>
           </div>
         </section>
-
-        <aside class="panel log-panel">
-          <div class="panel-title">
-            <span>电竞世界线</span>
-            <button id="activePauseBtn" class="text-btn" type="button">暂停 x3</button>
-          </div>
-          <div class="log" id="log"></div>
-        </aside>
       </section>
     </main>
 
     <script type="module" src="./app.js"></script>
   </body>
 </html>
+
