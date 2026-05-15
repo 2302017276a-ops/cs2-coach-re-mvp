@@ -174,9 +174,6 @@ function createInitialState() {
     team: { money: 60, morale: 55, fame: 38, tactics: 50, chemistry: 50, fans: 42 },
     players: [],
     weeklyActions: [],
-    currentMatch: null,
-    pendingDecision: null,
-    lastOpinion: null,
     logs: [],
     wins: 0,
     losses: 0,
@@ -205,9 +202,11 @@ const store = createStore((set) => ({
     return { pickedIds: [...s.pickedIds, name], budget: s.budget - player.price };
   }),
   startSeason: () => set((s) => {
-    const players = s.pickedIds.map((id) => clone(marketPlayers.find((p) => p.name === id)));
+    // v2-mobile: skip draft (don't read pickedIds), hardcode a roster.
+    const players = ["donk", "ropz", "sh1ro", "NiKo", "ZywOo"].map((id) => clone(marketPlayers.find((p) => p.name === id)));
     return {
       phase: "week",
+      week: 1,
       players,
       weeklyActions: rollWeeklyActions(),
       logs: [{ week: 1, title: "建队完成", text: `你选下了 ${players.map((p) => p.name).join("、")}。这套阵容决定你能叫出什么暂停，也决定谁会在关键局站出来。` }],
@@ -216,14 +215,9 @@ const store = createStore((set) => ({
   }),
   newSeason: () => set(createInitialState()),
   continueSeason: () => set((s) => ({
-    phase: "week",
     week: 1,
     team: applyTeamEffect(s.team, { morale: 8, chemistry: 8, tactics: 4 }),
     players: s.players.map((p) => ({ ...p, fatigue: clamp(p.fatigue - 10), teamwork: clamp(p.teamwork + 2) })),
-    weeklyActions: rollWeeklyActions(),
-    currentMatch: null,
-    pendingDecision: null,
-    lastOpinion: null,
     logs: [{ week: 1, title: "继续磨合", text: "你没有拆队。队员理解这是信任，也明白下一次崩盘要自己扛。" }, ...s.logs].slice(0, 80),
     wins: 0,
     losses: 0,
@@ -247,27 +241,41 @@ const store = createStore((set) => ({
     },
   })),
   finishMatch: (won, opinion, moment) => set((s) => {
-    const nextWeek = s.week + 1;
-    const ended = nextWeek > SEASON_WEEKS;
     return {
-      phase: ended ? "ended" : "post",
+      // v2-mobile: no multi-week loop; always allow immediate rematch.
+      phase: "post",
       wins: s.wins + (won ? 1 : 0),
       losses: s.losses + (won ? 0 : 1),
       lastOpinion: opinion,
       bestMoment: moment,
-      seasonEnded: ended,
+      seasonEnded: false,
       lastResult: `${won ? "胜利" : "失利"} ${s.currentMatch.us}:${s.currentMatch.them}`,
     };
   }),
-  nextWeek: () => set((s) => ({
-    phase: "week",
-    week: s.week + 1,
-    weeklyActions: rollWeeklyActions(),
-    currentMatch: null,
-    pendingDecision: null,
-    lastOpinion: null,
-    lastResult: `第 ${s.week + 1} 周：选择本周方向`,
-  })),
+  nextWeek: () => set((s) => {
+    // v2-mobile: "再来一局" - restart the same matchup/script/map.
+    if (!s.currentMatch) return { phase: "week", week: 1 };
+    const m = s.currentMatch;
+    return {
+      phase: "match",
+      week: 1,
+      pendingDecision: null,
+      lastOpinion: null,
+      lastResult: `${m.opponent.name} · ${m.script}`,
+      currentMatch: {
+        ...m,
+        round: 0,
+        us: 0,
+        them: 0,
+        economyUs: 50,
+        economyThem: 50,
+        adjustCount: 0,
+        timeouts: 3,
+        usedDecisionRounds: [],
+        lines: [{ tone: "event", text: `剧本：${m.script}。对手是 ${m.opponent.name}：${m.opponent.note}。` }],
+      },
+    };
+  }),
 }));
 
 store.subscribe((state) => {
@@ -614,6 +622,7 @@ function renderMatch(s) {
 function renderOpinion(s) {
   $("opinionBox").classList.toggle("hidden", s.phase !== "post");
   if (!s.lastOpinion) return;
+  $("nextWeekBtn").textContent = "再来一局";
   $("forumCard").innerHTML = `<h3>虎扑 CS2｜${s.lastOpinion.headline}</h3><p>${s.lastOpinion.body}</p><div class="rating-grid">${s.lastOpinion.ratings.map((r) => `<div class="rating"><span>${r.name}</span><strong>${r.score}</strong></div>`).join("")}</div>`;
 }
 
