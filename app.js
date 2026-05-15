@@ -20,6 +20,13 @@ const START_BUDGET = 100;
 const MR12_KILL_REWARD = { rifle: 300, smg: 600, awp: 100, shotgun: 900 };
 const MR12_LOSS_BONUS = [0, 1400, 1900, 2400, 2900, 3400];
 
+// Narrative placeholders (UI copy only).
+const narrative = {
+  heroLines: [],
+  broadcastShots: [],
+  benchNotes: [],
+};
+
 const $ = (id) => document.getElementById(id);
 const clamp = (n, min = 0, max = 100) => Math.max(min, Math.min(max, Math.round(n)));
 const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
