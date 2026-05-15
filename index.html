@@ -1,112 +1,14 @@
 <!doctype html>
-<html lang="zh-CN">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>CS2 Major 电竞局势模拟器</title>
-    <link rel="stylesheet" href="./styles.css" />
+    <title>CS2 Coach</title>
+    <script type="module" crossorigin src="/assets/index-Deghnwgh.js"></script>
+    <link rel="stylesheet" crossorigin href="/assets/index-CKbJSsYu.css">
   </head>
-  <body>
-    <main class="app">
-      <header class="header">
-        <div>
-          <p class="kicker">CS2 EMOTION SIM / FIRST TO 13</p>
-          <h1>Major Timeout</h1>
-        </div>
-        <div class="save-pill" id="saveStatus">LocalStorage 自动存档</div>
-      </header>
-
-      <section class="setup" id="setupView">
-        <div class="setup-copy">
-          <p class="kicker">开局建队</p>
-          <h2>有限预算，选 5 个人。你买的是比赛里的关键镜头。</h2>
-          <p>选满 5 人后进入比赛。</p>
-          <div class="budget-line">
-            <span id="budgetText">预算 ¥100</span>
-            <span id="pickedText">已选 0 / 5</span>
-          </div>
-          <button id="startSeasonBtn" class="primary" type="button" disabled>开始赛季</button>
-        </div>
-        <div class="market" id="market"></div>
-      </section>
-
-      <section class="game hidden" id="gameView">
-        <section class="panel main">
-          <div class="terminal-head">
-            <div>
-              <p class="kicker" id="phaseLabel"></p>
-              <h2 id="weekTitle"></h2>
-            </div>
-            <div class="save-pill scoreline" id="lastResult"></div>
-          </div>
-
-          <div class="actions" id="actions"></div>
-
-          <div class="match-card hidden" id="matchCard">
-            <aside class="kill-float panel" aria-label="killfeed">
-              <div class="panel-title">
-                <span>击杀信息</span>
-                <button id="activePauseBtn" class="text-btn" type="button">暂停 x3</button>
-              </div>
-              <div class="log" id="log"></div>
-            </aside>
-
-            <div class="match-top">
-              <span id="matchName">本场比赛</span>
-              <strong id="matchScore">0 : 0</strong>
-            </div>
-
-            <div class="match-meta" id="matchMeta"></div>
-
-            <details class="panel roster-panel" id="rosterPanel">
-              <summary class="panel-title">
-                <span>队员</span>
-                <span id="recordLine">0W-0L</span>
-              </summary>
-
-              <div class="team-block">
-                <div class="team-logo">DX</div>
-                <div>
-                  <h2 id="teamName">Drama X</h2>
-                  <p id="seasonLine">第 1 周</p>
-                </div>
-                <button id="newSeasonBtn" class="text-btn" type="button">重开</button>
-              </div>
-
-              <div class="panel-title small">
-                <span>首发名单</span>
-              </div>
-              <div class="roster" id="roster"></div>
-            </details>
-
-            <div class="round-feed" id="matchFeed"></div>
-            <button id="nextRoundBtn" class="primary" type="button">进入下一回合</button>
-          </div>
-
-          <div class="decision hidden" id="decisionBox">
-            <p id="decisionText"></p>
-            <div id="decisionOptions"></div>
-          </div>
-
-          <div class="opinion hidden" id="opinionBox">
-            <p class="kicker">赛后舆论生成器</p>
-            <div class="forum-card" id="forumCard"></div>
-            <button id="nextWeekBtn" class="primary" type="button">再来一局</button>
-          </div>
-
-          <div class="season-end hidden" id="seasonEnd">
-            <p class="kicker">SEASON REPORT</p>
-            <h2 id="endingTitle"></h2>
-            <p id="endingBody"></p>
-            <div class="records" id="records"></div>
-            <button id="continueBtn" class="primary" type="button">继续磨合</button>
-            <button id="restartBtn" class="secondary-action" type="button">变阵重组</button>
-          </div>
-        </section>
-      </section>
-    </main>
-
-    <script type="module" src="./app.js"></script>
+  <body class="bg-[#0d1117] text-[#c9d1d9]">
+    <div id="root"></div>
   </body>
 </html>
 
