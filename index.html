@@ -19,17 +19,32 @@
       <section class="setup" id="setupView">
         <div class="setup-copy">
           <p class="kicker">BUILD A REAL FIVE</p>
-          <h2>强队不是 1 神带 4 坑，而是一套能被暂停救回来的结构。</h2>
-          <p>超巨价格有边际税。阵容必须满足最低平均 rating 和角色平衡，避免单核赌命成为唯一正确答案。</p>
+          <h2>明星能赢残局，结构才能赢 Major。</h2>
+          <p>你选的不只是五个人。</p>
           <div class="budget-line">
             <span id="budgetText">预算 $128</span>
             <span id="pickedText">已选 0 / 5</span>
           </div>
           <div class="gate" id="rosterGate">需要选满 5 人</div>
-          <button id="startSeasonBtn" class="primary" type="button" disabled>开始赛季</button>
+          <div class="setup-actions">
+            <button id="startSeasonBtn" class="primary" type="button" disabled>开始赛季</button>
+            <button id="infoBtn" class="secondary-action" type="button">说明</button>
+          </div>
         </div>
         <div class="market" id="market"></div>
       </section>
+
+      <div class="modal hidden" id="infoModal" role="dialog" aria-modal="true" aria-labelledby="infoTitle">
+        <div class="modal-card">
+          <div class="panel-title">
+            <span id="infoTitle">说明</span>
+            <button id="closeInfoBtn" class="text-btn" type="button">关闭</button>
+          </div>
+          <p>带领你的队伍，<br />在 5 周赛程中冲进 Major 决赛。</p>
+          <p>暂停、变阵、赌点、翻盘。</p>
+          <p>每一个 call，<br />都会改变比赛走势。</p>
+        </div>
+      </div>
 
       <section class="grid hidden" id="gameView">
         <aside class="panel side">
@@ -103,7 +118,7 @@
 
         <aside class="panel log-panel">
           <div class="panel-title controls">
-            <span>教练席</span>
+            <span>读盘席</span>
             <button id="readGameBtn" class="text-btn" type="button">读盘</button>
             <button id="activePauseBtn" class="text-btn" type="button">暂停 x3</button>
           </div>
@@ -112,6 +127,6 @@
       </section>
     </main>
 
-    <script type="module" src="./app.js"></script>
+    <script defer src="./app.js?v=0.2.3-roster-fix"></script>
   </body>
 </html>
