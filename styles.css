@@ -670,6 +670,13 @@ body {
   margin: 0 auto !important;
 }
 
+@media (min-width: 768px) {
+  .app {
+    width: min(720px, calc(100% - 16px)) !important;
+    padding: 24px !important;
+  }
+}
+
 .grid {
   display: flex !important;
   flex-direction: column !important;
