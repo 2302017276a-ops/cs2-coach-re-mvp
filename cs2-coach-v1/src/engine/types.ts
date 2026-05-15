@@ -49,7 +49,7 @@ export interface UserDecision {
 }
 
 export interface MatchState {
-  map: 'dust2';
+  map: 'dust2' | 'nuke' | 'ancient' | 'mirage' | 'inferno';
   roundNumber: number;
   phase: MatchPhase;
   teamA: TeamState;

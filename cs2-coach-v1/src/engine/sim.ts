@@ -58,7 +58,11 @@ function clamp(v: number, min: number, max: number) {
   return Math.max(min, Math.min(max, v));
 }
 
-export function createMatch(): MatchState {
+export function createMatch(opts?: {
+  map?: MatchState['map'];
+  teamAName?: string;
+  teamBName?: string;
+}): MatchState {
   const p = players as { name: string; photoHash: string }[];
   const mkTeam = (name: string, side: 'T' | 'CT', slice: number): TeamState => ({
     name,
@@ -70,11 +74,11 @@ export function createMatch(): MatchState {
     players: p.slice(slice, slice + 5).map((x) => mk(x.name, x.photoHash)),
   });
   return {
-    map: 'dust2',
+    map: opts?.map ?? 'dust2',
     roundNumber: 1,
     phase: 'decision',
-    teamA: mkTeam('Spirit', 'T', 0),
-    teamB: mkTeam('FaZe', 'CT', 5),
+    teamA: mkTeam(opts?.teamAName ?? 'Spirit', 'T', 0),
+    teamB: mkTeam(opts?.teamBName ?? 'FaZe', 'CT', 5),
     killfeed: [],
     commentary: [],
     lastDecision: { economy: 'eco', tactic: 'default' },
@@ -82,6 +86,10 @@ export function createMatch(): MatchState {
 }
 
 export function simulateRound(s: MatchState, decision: UserDecision) {
+  if (s.teamA.score >= 13 || s.teamB.score >= 13) {
+    s.phase = 'match_end';
+    return s;
+  }
   const enemyEconomy: EconomyOption = 'full';
   applyBuy(s.teamA, decision.economy);
   applyBuy(s.teamB, enemyEconomy);
@@ -111,10 +119,9 @@ export function simulateRound(s: MatchState, decision: UserDecision) {
   );
   winner.score += 1;
   s.roundNumber += 1;
-  s.phase = 'post_round';
+  s.phase = s.teamA.score >= 13 || s.teamB.score >= 13 ? 'match_end' : 'post_round';
   s.killfeed = killfeed;
   s.commentary = castRound(killfeed, decision);
   s.lastDecision = decision;
   return s;
 }
-
