@@ -3,29 +3,32 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>CS2 Major 鐢电珵灞€鍔挎ā鎷熷櫒</title>
+    <title>CS2 Major 电竞局势模拟器</title>
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
     <main class="app">
       <header class="header">
         <div>
-          <p class="kicker">CS2 EMOTION SIM 路 FIRST TO 13 路 SINGLE MATCH</p>
-          <h1>CS2 Major 鍐宠禌</h1>
+          <p class="kicker">CS2 EMOTION SIM / FIRST TO 13</p>
+          <h1>Major Timeout</h1>
         </div>
-        <div class="save-pill" id="saveStatus">LocalStorage 鑷姩瀛樻。銆?/div>
+        <div class="save-pill" id="saveStatus">LocalStorage 自动存档</div>
       </header>
 
       <section class="setup" id="setupView">
         <div class="setup-copy">
-          <p class="kicker">寮€灞€寤洪槦</p>
-          <h2>蹇€熷紑灞€锛氱偣鍑诲紑濮嬬洿鎺ヨ繘鍏ユ瘮璧涖€?/h2>
-          <p>褰撳墠鍒嗘敮宸茶烦杩囬€夌涓庤禌瀛ｅ惊鐜紝鐩存帴寮€鎵撲竴鍦?BO1 鏂囧瓧鐩存挱銆?/p>
+          <p class="kicker">开局建队</p>
+          <h2>有限预算，选 5 个人。你买的是比赛里的关键镜头。</h2>
+          <p>
+            巨星能爆种，也会要资源；老将能稳住局面，也可能反应不过来。
+            选满 5 人后进入比赛。
+          </p>
           <div class="budget-line">
-            <span id="budgetText">棰勭畻 $100</span>
-            <span id="pickedText">宸查€?0 / 5</span>
+            <span id="budgetText">预算 ¥100</span>
+            <span id="pickedText">已选 0 / 5</span>
           </div>
-          <button id="startSeasonBtn" class="primary" type="button">寮€濮嬫瘮璧?/button>
+          <button id="startSeasonBtn" class="primary" type="button" disabled>开始赛季</button>
         </div>
         <div class="market" id="market"></div>
       </section>
@@ -34,10 +37,10 @@
         <section class="panel main">
           <div class="terminal-head">
             <div>
-              <p class="kicker" id="phaseLabel">鏂囧瓧鐩存挱</p>
-              <h2 id="weekTitle">鐐瑰嚮鎺ㄨ繘姣忎釜鍥炲悎</h2>
+              <p class="kicker" id="phaseLabel">每周局势</p>
+              <h2 id="weekTitle">选择本周行动</h2>
             </div>
-            <div class="save-pill scoreline" id="lastResult">绛夊緟绗竴鍦烘瘮璧?/div>
+            <div class="save-pill scoreline" id="lastResult">等待第一场比赛</div>
           </div>
 
           <div class="actions" id="actions"></div>
@@ -46,13 +49,13 @@
             <aside class="kill-float panel" aria-label="killfeed">
               <div class="panel-title">
                 <span>Killfeed</span>
-                <button id="activePauseBtn" class="text-btn" type="button">鏆傚仠 x3</button>
+                <button id="activePauseBtn" class="text-btn" type="button">暂停 x3</button>
               </div>
               <div class="log" id="log"></div>
             </aside>
 
             <div class="match-top">
-              <span id="matchName">鏈満姣旇禌</span>
+              <span id="matchName">本周比赛</span>
               <strong id="matchScore">0 : 0</strong>
             </div>
 
@@ -60,7 +63,7 @@
 
             <details class="panel roster-panel" id="rosterPanel">
               <summary class="panel-title">
-                <span>闃熷憳闈㈡澘</span>
+                <span>队员面板</span>
                 <span id="recordLine">0W-0L</span>
               </summary>
 
@@ -68,24 +71,24 @@
                 <div class="team-logo">DX</div>
                 <div>
                   <h2 id="teamName">Drama X</h2>
-                  <p id="seasonLine">绗?1 鍛?/ 1 鍛?/p>
+                  <p id="seasonLine">第 1 周 / 5 周</p>
                 </div>
-                <button id="newSeasonBtn" class="text-btn" type="button">閲嶅紑</button>
+                <button id="newSeasonBtn" class="text-btn" type="button">重开</button>
               </div>
 
               <div class="panel-title small">
-                <span>棣栧彂鍚嶅崟</span>
+                <span>首发名单</span>
               </div>
               <div class="roster" id="roster"></div>
             </details>
 
             <div class="round-feed" id="matchFeed"></div>
-            <button id="nextRoundBtn" class="primary" type="button">杩涘叆涓嬩竴鍥炲悎</button>
+            <button id="nextRoundBtn" class="primary" type="button">点击进入下一回合</button>
           </div>
 
           <section class="panel econ-bar" aria-label="economy">
             <div class="panel-title">
-              <span>缁忔祹鏉?/span>
+              <span>经济条</span>
             </div>
             <div class="stat-stack" id="teamStats"></div>
           </section>
@@ -96,9 +99,9 @@
           </div>
 
           <div class="opinion hidden" id="opinionBox">
-            <p class="kicker">璧涘悗鑸嗚鐢熸垚鍣?/p>
+            <p class="kicker">赛后舆论生成器</p>
             <div class="forum-card" id="forumCard"></div>
-            <button id="nextWeekBtn" class="primary" type="button">鍐嶆潵涓€灞€</button>
+            <button id="nextWeekBtn" class="primary" type="button">再来一局</button>
           </div>
 
           <div class="season-end hidden" id="seasonEnd">
@@ -106,8 +109,8 @@
             <h2 id="endingTitle"></h2>
             <p id="endingBody"></p>
             <div class="records" id="records"></div>
-            <button id="continueBtn" class="primary" type="button">缁х画纾ㄥ悎</button>
-            <button id="restartBtn" class="secondary-action" type="button">鍙橀樀閲嶇粍</button>
+            <button id="continueBtn" class="primary" type="button">继续磨合</button>
+            <button id="restartBtn" class="secondary-action" type="button">变阵重组</button>
           </div>
         </section>
       </section>
