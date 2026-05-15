@@ -659,51 +659,10 @@ h2 {
   }
 }
 
-/*=== v2-mobile single-column override ===*/
-body {
-  display: flex;
-  justify-content: center;
-}
-
+/*=== v2-mobile responsive container ===*/
 .app {
-  width: min(480px, calc(100% - 16px)) !important;
-  margin: 0 auto !important;
+  width: 100%;
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 16px;
 }
-
-@media (min-width: 768px) {
-  .app {
-    width: min(720px, calc(100% - 16px)) !important;
-    padding: 24px !important;
-  }
-}
-
-.grid {
-  display: flex !important;
-  flex-direction: column !important;
-  gap: 10px !important;
-  height: auto !important;
-  min-height: auto !important;
-  grid-template-columns: none !important;
-}
-
-.side,
-.main,
-.log-panel {
-  width: 100% !important;
-  max-width: 100% !important;
-}
-
-.setup {
-  display: flex !important;
-  flex-direction: column !important;
-  grid-template-columns: none !important;
-}
-
-.market {
-  display: flex !important;
-  flex-wrap: wrap !important;
-  justify-content: center !important;
-  grid-template-columns: none !important;
-}
-
-.hidden { display: none !important; }

@@ -149,7 +149,7 @@ const nodes = {
   clutch: ["关键残局", "场上只剩两个人，语音里只剩呼吸声。"],
   timeout: ["暂停窗口", "镜头切到教练席，所有人都在等你有没有东西。"],
   morale: ["心态回合", "这一分会影响谁还愿意相信谁。"],
-  gamble: ["赌点", "地图另一侧空得能听见风声，赌对是天才，赌错是素材。"],
+  gamble: ["赌点", "地图另一侧空得能听见风声。"],
   info: ["信息误判", "对手给了一个假脚步，你们像真的听见了命运。"],
   duel: ["明星对位", "对面明星开始要球，这回合像单挑，也像审判。"],
 };
@@ -481,7 +481,7 @@ function makeRoundLine(state, ctx) {
   const action = ctx.won ? winAction(p, ctx.node) : loseAction(p, state.currentMatch.opponent.star, ctx.node);
   const cast = castLine(ctx, p);
   const adjust = ctx.adjustCount >= 2 && !ctx.won ? "<br>警报：对方已经开始根据你的转点节奏提前站位。" : "";
-  return { tone: ctx.won ? "good" : "bad", text: `<small>第${ctx.round}回合｜${ctx.us}:${ctx.them}｜${title}｜参考胜率 ${ctx.prob.toFixed(2)}%</small>${detail}<br>${action}${adjust}<br><br>解说台：${cast}` };
+  return { tone: ctx.won ? "good" : "bad", text: `<small>第${ctx.round}回合｜${ctx.us}:${ctx.them}｜${title}｜参考胜率 ${ctx.prob.toFixed(2)}%</small>${detail}<br>${action}${adjust}<br><br>${cast}` };
 }
 
 function winAction(p, node) {
@@ -503,7 +503,7 @@ function loseAction(p, star, node) {
     clutch: `${p.name} 最后一枪空了，对面 ${star} 没给第二次机会。`,
     timeout: `暂停刚结束就白给，战术板还热着，比分已经凉了。`,
     morale: `${p.name} 没补上那枪，语音突然安静。`,
-    gamble: `赌点赌错了，地图另一侧像开了门，对手排队进包点。`,
+    gamble: `赌点没赌到，地图另一侧像开了门，对手排队进包点。`,
     info: `假脚步骗到了你们，真正的进攻已经进点。`,
     duel: `对面 ${star} 开始收割，你的针对像写在纸上的勇敢。`,
   };
@@ -514,7 +514,7 @@ function castLine(ctx, p) {
   const winLines = [
     `不得不提啊兄弟们，${p.name} 这回合真有东西。`,
     "这波有暂停后的味道，线路全对上了。",
-    "赌对了！这一下对手的默认被你撕开了。",
+    "赌点对上了！这一下对手的默认被你撕开了。",
     "黑暗中的曙光出来了，硬把局势从地上捡起来。",
     "这个回合打完，对面下次真不敢这么默认了。",
   ];
@@ -582,9 +582,8 @@ function renderTeam(s) {
   $("seasonLine").textContent = `第 ${s.week} 周 / ${SEASON_WEEKS} 周`;
   $("recordLine").textContent = `${s.wins}W-${s.losses}L`;
   $("lastResult").textContent = s.lastResult;
-  $("weekTitle").textContent = s.phase === "match" ? "点击推进每个回合" : s.phase === "post" ? "赛后舆论" : s.phase === "ended" ? "赛季结束" : "选择本周行动";
-  $("phaseLabel").textContent = s.phase === "match" ? "文字直播" : "每周局势";
-  $("teamStats").innerHTML = teamStatDefs.map(([label, key, prefix]) => `<div class="stat-row"><div class="stat-top"><span>${label}</span><b>${prefix}${s.team[key]}</b></div><div class="bar"><span style="width:${Math.min(100, s.team[key])}%"></span></div></div>`).join("");
+  $("weekTitle").textContent = s.phase === "post" ? "赛后复盘" : s.phase === "ended" ? "比赛结束" : "";
+  $("phaseLabel").textContent = "";
   $("roster").innerHTML = s.players.map((p) => `<div class="player"><strong><span>${p.name}</span><span>${p.role}</span></strong><p>${p.tag} · ${p.voice}</p><div class="mini">${playerStatDefs.map(([l, k]) => `<span>${l}${p[k]}</span>`).join("")}</div></div>`).join("");
 }
 
@@ -608,6 +607,9 @@ function renderMatch(s) {
   $("activePauseBtn").disabled = s.phase !== "match" || !m || !!s.pendingDecision || m.timeouts <= 0;
   $("activePauseBtn").textContent = m ? `主动暂停 x${m.timeouts}` : "主动暂停 x3";
   if (!m) return;
+  // Title band: Round + map + score.
+  $("weekTitle").textContent = `第 ${m.round + 1} 回合`;
+  $("phaseLabel").textContent = `${m.map} — ${m.us}:${m.them}`;
   $("matchName").textContent = `${m.map} vs ${m.opponent.name}`;
   $("matchScore").textContent = `${m.us} : ${m.them}`;
   $("matchMeta").innerHTML = [
