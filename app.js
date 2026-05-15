@@ -646,4 +646,7 @@ $("activePauseBtn").addEventListener("click", activePause);
 $("nextRoundBtn").addEventListener("click", playNextRound);
 $("nextWeekBtn").addEventListener("click", () => store.getState().nextWeek());
 
+window.addEventListener("load", () =>
+  store.getState().phase === "setup" ? store.getState().startSeason() : null
+);
 render();
