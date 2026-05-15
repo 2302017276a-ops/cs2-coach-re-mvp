@@ -3,15 +3,15 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>2026 IEM 涓婃捣鈥撶數绔炲眬鍔挎ā鎷熷櫒</title>
+    <title>CS2 Major 鐢电珵灞€鍔挎ā鎷熷櫒</title>
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
     <main class="app">
       <header class="header">
         <div>
-          <p class="kicker">CS2 EMOTION SIM 路 FIRST TO 13 路 5 WEEKS</p>
-          <h1>2026 IEM 涓婃捣</h1>
+          <p class="kicker">CS2 EMOTION SIM 路 FIRST TO 13 路 SINGLE MATCH</p>
+          <h1>CS2 Major 鍐宠禌</h1>
         </div>
         <div class="save-pill" id="saveStatus">LocalStorage 鑷姩瀛樻。銆?/div>
       </header>
@@ -19,16 +19,13 @@
       <section class="setup" id="setupView">
         <div class="setup-copy">
           <p class="kicker">寮€灞€寤洪槦</p>
-          <h2>鏈夐檺棰勭畻锛岄€?5 涓汉銆備綘涔扮殑鏄瘮璧涢噷鐨勫叧閿暅澶淬€?/h2>
-          <p>
-            宸ㄦ槦鑳界垎绉嶏紝涔熶細瑕佽祫婧愶紱鑰佸皢鑳界ǔ浣忓眬闈紝涔熷彲鑳藉弽搴斾笉杩囨潵銆?
-            閫夋弧 5 浜哄悗杩涘叆 5 鍛ㄧ煭璧涘銆?
-          </p>
+          <h2>蹇€熷紑灞€锛氱偣鍑诲紑濮嬬洿鎺ヨ繘鍏ユ瘮璧涖€?/h2>
+          <p>褰撳墠鍒嗘敮宸茶烦杩囬€夌涓庤禌瀛ｅ惊鐜紝鐩存帴寮€鎵撲竴鍦?BO1 鏂囧瓧鐩存挱銆?/p>
           <div class="budget-line">
             <span id="budgetText">棰勭畻 $100</span>
             <span id="pickedText">宸查€?0 / 5</span>
           </div>
-          <button id="startSeasonBtn" class="primary" type="button" disabled>寮€濮嬭禌瀛?/button>
+          <button id="startSeasonBtn" class="primary" type="button">寮€濮嬫瘮璧?/button>
         </div>
         <div class="market" id="market"></div>
       </section>
@@ -37,8 +34,8 @@
         <section class="panel main">
           <div class="terminal-head">
             <div>
-              <p class="kicker" id="phaseLabel">姣忓懆灞€鍔?/p>
-              <h2 id="weekTitle">閫夋嫨鏈懆琛屽姩</h2>
+              <p class="kicker" id="phaseLabel">鏂囧瓧鐩存挱</p>
+              <h2 id="weekTitle">鐐瑰嚮鎺ㄨ繘姣忎釜鍥炲悎</h2>
             </div>
             <div class="save-pill scoreline" id="lastResult">绛夊緟绗竴鍦烘瘮璧?/div>
           </div>
@@ -55,7 +52,7 @@
             </aside>
 
             <div class="match-top">
-              <span id="matchName">鏈懆姣旇禌</span>
+              <span id="matchName">鏈満姣旇禌</span>
               <strong id="matchScore">0 : 0</strong>
             </div>
 
@@ -71,7 +68,7 @@
                 <div class="team-logo">DX</div>
                 <div>
                   <h2 id="teamName">Drama X</h2>
-                  <p id="seasonLine">绗?1 鍛?/ 5 鍛?/p>
+                  <p id="seasonLine">绗?1 鍛?/ 1 鍛?/p>
                 </div>
                 <button id="newSeasonBtn" class="text-btn" type="button">閲嶅紑</button>
               </div>
@@ -83,7 +80,7 @@
             </details>
 
             <div class="round-feed" id="matchFeed"></div>
-            <button id="nextRoundBtn" class="primary" type="button">鐐瑰嚮杩涘叆涓嬩竴鍥炲悎</button>
+            <button id="nextRoundBtn" class="primary" type="button">杩涘叆涓嬩竴鍥炲悎</button>
           </div>
 
           <section class="panel econ-bar" aria-label="economy">
@@ -101,7 +98,7 @@
           <div class="opinion hidden" id="opinionBox">
             <p class="kicker">璧涘悗鑸嗚鐢熸垚鍣?/p>
             <div class="forum-card" id="forumCard"></div>
-            <button id="nextWeekBtn" class="primary" type="button">杩涘叆涓嬩竴鍛?/button>
+            <button id="nextWeekBtn" class="primary" type="button">鍐嶆潵涓€灞€</button>
           </div>
 
           <div class="season-end hidden" id="seasonEnd">
