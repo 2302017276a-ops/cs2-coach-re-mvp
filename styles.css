@@ -698,3 +698,5 @@ body {
   justify-content: center !important;
   grid-template-columns: none !important;
 }
+
+.hidden { display: none !important; }

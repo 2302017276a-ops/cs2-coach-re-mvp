@@ -562,6 +562,8 @@ function render() {
     renderEnd(s);
     renderLog(s);
   }
+
+  if (!hasSave && s.phase === "setup") return store.getState().startSeason();
 }
 
 function renderSetup(s) {
