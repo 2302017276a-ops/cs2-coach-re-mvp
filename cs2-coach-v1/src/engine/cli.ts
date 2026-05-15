@@ -1,0 +1,2 @@
+import { createMatch, simulateRound } from './sim'; import type { UserDecision } from './types'; const match = createMatch(); for (let i = 0; i < 3; i++) { const d: UserDecision = { economy: 'full', tactic: 'default' }; simulateRound(match, d); console.log(match.roundNumber-1, match.teamA.name, match.teamA.score, '-', match.teamB.score, match.teamB.name); match.killfeed = []; match.phase = 'decision' }
+

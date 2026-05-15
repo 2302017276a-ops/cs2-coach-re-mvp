@@ -1,0 +1,2 @@
+@tailwind base; @tailwind components; @tailwind utilities; .panel { border: 1px solid #30363d; border-radius: 6px; background: #161b22; } .mono { font-family: 'JetBrains Mono', monospace; }
+
