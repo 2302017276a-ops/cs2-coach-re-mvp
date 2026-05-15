@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { roundType } from './engine/economy';
 import { createMatch, simulateRound } from './engine/sim';
 import type { EconomyOption, MatchState, TacticOption } from './engine/types';
@@ -24,17 +24,22 @@ export function App() {
   const [tactic, setTactic] = useState<TacticOption>('default');
   const [panelOpen, setPanelOpen] = useState(false);
 
+  // Progressive "live" reveal of commentary lines after decision confirmed.
+  const [revealCount, setRevealCount] = useState(0);
+  const revealTimerRef = useRef<number | null>(null);
+
   const canDecide = match.phase === 'decision';
-  const canSim = match.phase === 'live_round';
   const canNext = match.phase === 'post_round';
   const ended = match.phase === 'match_end';
+
+  const mapLabel = useMemo(() => maps.find((m) => m.key === match.map)?.label ?? match.map, [match.map]);
 
   const tacticLabels: Record<TacticOption, string> = useMemo(
     () => ({
       default: '默认控图',
       mid: '中路强控',
-      explode_a: 'A点爆开',
-      slow_b: 'B点慢摸',
+      explode_a: 'A 点爆开',
+      slow_b: 'B 点慢摸',
       fake: '假打转点',
     }),
     []
@@ -47,9 +52,49 @@ export function App() {
     setStarted(true);
   };
 
-  const confirmDecision = () => setMatch((s) => ({ ...s, phase: 'live_round' }));
-  const playRound = () => setMatch((s) => simulateRound(s, { economy, tactic }));
+  const confirmDecision = () => {
+    setMatch((s) => {
+      const next = simulateRound(s, { economy, tactic });
+      if (next.phase === 'match_end') return next;
+      return { ...next, phase: 'live_round' };
+    });
+  };
+
   const nextRound = () => setMatch((s) => ({ ...s, phase: 'decision', killfeed: [] }));
+
+  useEffect(() => {
+    if (match.phase !== 'live_round') return;
+
+    // Restart progressive reveal for this round.
+    setRevealCount(0);
+    if (revealTimerRef.current) window.clearTimeout(revealTimerRef.current);
+    revealTimerRef.current = null;
+
+    return () => {
+      if (revealTimerRef.current) window.clearTimeout(revealTimerRef.current);
+      revealTimerRef.current = null;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [match.phase, match.roundNumber]);
+
+  useEffect(() => {
+    if (match.phase !== 'live_round') return;
+
+    if (revealCount >= match.commentary.length) {
+      // Reveal finished: enter post_round so "下一回合" shows up.
+      setMatch((s) => (s.phase === 'live_round' ? { ...s, phase: 'post_round' } : s));
+      return;
+    }
+
+    const delay = 1000 + Math.floor(Math.random() * 1000);
+    revealTimerRef.current = window.setTimeout(() => setRevealCount((n) => n + 1), delay);
+    return () => {
+      if (revealTimerRef.current) window.clearTimeout(revealTimerRef.current);
+      revealTimerRef.current = null;
+    };
+  }, [match.phase, match.commentary.length, revealCount]);
+
+  const visibleCommentary = match.phase === 'live_round' ? match.commentary.slice(0, revealCount) : match.commentary;
 
   if (!started) {
     return (
@@ -82,7 +127,7 @@ export function App() {
             ))}
           </select>
 
-          <button className="panel w-full p-2" onClick={start}>
+          <button className="panel decision-btn w-full p-2" onClick={start}>
             开始
           </button>
         </section>
@@ -92,10 +137,10 @@ export function App() {
 
   return (
     <main className="mx-auto min-h-screen max-w-md space-y-3 bg-[#0d1117] p-3 text-sm text-[#f0f6fc]">
-      <header className="panel p-2 text-[#8b949e]">Major Timeout · {match.map}</header>
+      <header className="panel p-2 text-[#8b949e]">Major Timeout · {mapLabel}</header>
 
       <section className="panel p-3 text-center">
-        <div className="mono text-5xl font-bold">
+        <div className="mono score font-bold">
           {match.teamA.score} : {match.teamB.score}
         </div>
         <div>
@@ -133,8 +178,8 @@ export function App() {
           )}
         </div>
 
-        <div className="mt-3 space-y-2 pr-[130px]">
-          {match.commentary.map((c, i) => (
+        <div className="commentary mt-3 space-y-2 pr-[130px]">
+          {visibleCommentary.map((c, i) => (
             <div key={i} className={c.highlight ? 'text-[#d29922]' : ''}>
               {c.caster === 'wanjiqi' ? '玩机器' : '马西西'}: {c.text}
             </div>
@@ -158,7 +203,7 @@ export function App() {
             {(['eco', 'semi', 'force', 'full'] as EconomyOption[]).map((op) => (
               <button
                 key={op}
-                className={`panel p-2 ${economy === op ? 'border-[#58a6ff]' : ''}`}
+                className={`panel decision-btn p-2 ${economy === op ? 'border-[#58a6ff]' : ''}`}
                 onClick={() => setEconomy(op)}
               >
                 {op.toUpperCase()}
@@ -169,27 +214,26 @@ export function App() {
             {(['default', 'mid', 'explode_a', 'slow_b', 'fake'] as TacticOption[]).map((k) => (
               <button
                 key={k}
-                className={`panel p-2 ${tactic === k ? 'border-[#7b2d8e]' : ''}`}
+                className={`panel decision-btn p-2 ${tactic === k ? 'border-[#7b2d8e]' : ''}`}
                 onClick={() => setTactic(k)}
               >
                 {tacticLabels[k]}
               </button>
             ))}
           </div>
-          <button className="panel w-full p-2" onClick={confirmDecision}>
+          <button className="panel decision-btn w-full p-2" onClick={confirmDecision}>
             确认决策
           </button>
         </section>
       )}
 
-      {canSim && !ended && (
-        <button className="panel w-full p-2" onClick={playRound}>
-          模拟回合
-        </button>
+      {match.phase === 'live_round' && !ended && (
+        <div className="panel p-2 text-center text-xs text-[#8b949e]">直播中…</div>
       )}
+
       {canNext && !ended && (
-        <button className="panel w-full p-2" onClick={nextRound}>
-          下一回合决策
+        <button className="panel decision-btn w-full p-2" onClick={nextRound}>
+          下一回合
         </button>
       )}
     </main>

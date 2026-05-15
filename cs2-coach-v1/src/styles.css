@@ -1,2 +1,52 @@
-@tailwind base; @tailwind components; @tailwind utilities; .panel { border: 1px solid #30363d; border-radius: 6px; background: #161b22; } .mono { font-family: 'JetBrains Mono', monospace; }
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+.panel {
+  border: 1px solid #30363d;
+  border-radius: 6px;
+  background: #161b22;
+}
+
+.mono {
+  font-family: 'JetBrains Mono', monospace;
+}
+
+/* Responsive typography:
+   - <640px: body 13px, score 36px
+   - >=640px: body 16px, score 56px, commentary line-height 1.8 */
+html {
+  font-size: 16px;
+}
+
+@media (max-width: 639px) {
+  html {
+    font-size: 13px;
+  }
+}
+
+.score {
+  font-size: 56px;
+  line-height: 1;
+}
+
+@media (max-width: 639px) {
+  .score {
+    font-size: 36px;
+  }
+}
+
+.commentary {
+  line-height: 1.5;
+}
+
+@media (min-width: 640px) {
+  .commentary {
+    line-height: 1.8;
+  }
+}
+
+.decision-btn {
+  height: 48px;
+}
 
