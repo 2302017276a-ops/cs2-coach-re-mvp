@@ -562,8 +562,6 @@ function render() {
     renderEnd(s);
     renderLog(s);
   }
-
-  if (!hasSave && s.phase === "setup") return store.getState().startSeason();
 }
 
 function renderSetup(s) {
@@ -651,7 +649,4 @@ $("activePauseBtn").addEventListener("click", activePause);
 $("nextRoundBtn").addEventListener("click", playNextRound);
 $("nextWeekBtn").addEventListener("click", () => store.getState().nextWeek());
 
-window.addEventListener("load", () =>
-  store.getState().phase === "setup" ? store.getState().startSeason() : null
-);
 render();

@@ -38,7 +38,7 @@ button {
 }
 
 .app {
-  width: min(480px, calc(100% - 18px));
+  width: 100%;
   margin: 0 auto;
   padding: 14px 0;
 }
@@ -659,10 +659,11 @@ h2 {
   }
 }
 
-/*=== v2-mobile responsive container ===*/
-.app {
-  width: 100%;
-  max-width: 800px;
-  margin: 0 auto;
-  padding: 16px;
+@media (max-width: 600px) {
+  .app { width: 100%; padding: 8px; }
+  .grid, .setup { display: flex !important; flex-direction: column !important; }
+}
+@media (min-width: 601px) {
+  .app { width: 100%; max-width: 860px; margin: 0 auto; padding: 24px 32px; }
+  .grid { display: grid !important; grid-template-columns: 260px 1fr 220px !important; }
 }
