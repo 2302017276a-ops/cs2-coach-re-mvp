@@ -548,8 +548,9 @@ function makeMoment(state, won) {
 
 function render() {
   const s = store.getState();
-  $("setupView").classList.toggle("hidden", s.phase !== "setup");
-  $("gameView").classList.toggle("hidden", s.phase === "setup");
+  const hasSave = !!localStorage.getItem(SAVE_KEY);
+  $("setupView").classList.toggle("hidden", hasSave || s.phase !== "setup");
+  $("gameView").classList.toggle("hidden", !hasSave && s.phase === "setup");
   $("saveStatus").textContent = `已自动存档 · ${new Date().toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" })}`;
   renderSetup(s);
   if (s.phase !== "setup") {
